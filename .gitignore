@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local
+coverage/
+# .vscode/ - Permettre les settings partagés
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+storage/postgres/
+storage/redis/
+.next/
+.vercel/

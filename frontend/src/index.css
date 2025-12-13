@@ -1,0 +1,873 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   VARIABLES CSS - Palette SIGEC Moderne
+   ======================================== */
+:root {
+  /* Couleurs principales */
+  --color-brand: #3F5EFB;
+  --color-brand-light: #818CF8;
+  --color-accent: #00B4D8;
+  --color-success: #2EC4B6;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+  --color-orange: #FF9F43;
+  --color-orange-light: #FFB86C;
+  --color-orange-dark: #FF8C00;
+  
+  /* Mode clair - Nuances douces */
+  --bg-light: #F5F7FA;
+  --bg-card-light: #FFFFFF;
+  --bg-secondary-light: #EDF2F7;
+  --border-light: #E2E8F0;
+  --text-light: #1A202C;
+  --header-light: #FF9F43;
+  
+  /* Mode sombre - Gris anthracite élégant */
+  --bg-dark: #1A1A2E;
+  --bg-card-dark: #252540;
+  --bg-secondary-dark: #2D2D4A;
+  --border-dark: #3D3D5C;
+  --text-dark: #F7FAFC;
+  --header-dark: #FF9F43;
+  --sidebar-dark: #16162B;
+  
+  /* Ombres */
+  --shadow-card: 0px 2px 8px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0px 6px 16px rgba(0,0,0,0.12);
+}
+
+/* ========================================
+   MODE CLAIR - Design Moderne & Chaleureux
+   ======================================== */
+body {
+  background-color: var(--bg-light);
+  color: var(--text-light);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ========================================
+   MODE SOMBRE - Gris anthracite élégant
+   ======================================== */
+.dark body,
+.dark {
+  background-color: var(--bg-dark);
+  color: var(--text-dark);
+}
+
+/* Fond principal sombre - Gris anthracite avec subtilité */
+.dark {
+  background: linear-gradient(180deg, #1A1A2E 0%, #16162B 100%);
+}
+
+/* ========================================
+   MODE CLAIR - Fond doux et aéré
+   ======================================== */
+body {
+  background: linear-gradient(180deg, #F5F7FA 0%, #EDF2F7 100%);
+}
+
+/* ========================================
+   RÈGLES GLOBALES MODE SOMBRE - Couverture complète
+   ======================================== */
+
+/* Inputs en mode sombre */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: var(--bg-secondary-dark) !important;
+  border-color: var(--border-dark) !important;
+  color: var(--text-dark) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #6B7280 !important;
+}
+
+/* Fonds - Gris anthracite élégant (sans classes Tailwind conflictuelles) */
+.dark .bg-white { background-color: #252540 !important; border-color: #3D3D5C !important; }
+.dark .bg-gray-50 { background-color: #2D2D4A !important; }
+.dark .bg-gray-100 { background-color: #2D2D4A !important; }
+.dark .bg-gray-200 { background-color: #3D3D5C !important; }
+
+/* Textes - Lisibilité optimale */
+.dark .text-gray-900 { color: #F1F1F1 !important; }
+.dark .text-gray-800 { color: #E5E7EB !important; }
+.dark .text-gray-700 { color: #D1D5DB !important; }
+.dark .text-gray-600 { color: #9CA3AF !important; }
+.dark .text-gray-500 { color: #9CA3AF !important; }
+.dark .text-gray-400 { color: #6B7280 !important; }
+
+/* Bordures */
+.dark .border-gray-100 { border-color: rgba(255,255,255,0.08) !important; }
+.dark .border-gray-200 { border-color: rgba(255,255,255,0.08) !important; }
+.dark .border-gray-300 { border-color: rgba(255,255,255,0.12) !important; }
+
+/* Hover states */
+.dark .hover\:bg-gray-50:hover { background-color: #374151 !important; }
+.dark .hover\:bg-gray-100:hover { background-color: #374151 !important; }
+.dark .hover\:bg-gray-200:hover { background-color: #4B5563 !important; }
+
+/* Shadows en mode sombre */
+.dark .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important; }
+.dark .shadow { box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important; }
+.dark .shadow-md { box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important; }
+.dark .shadow-lg { box-shadow: 0 8px 16px rgba(0,0,0,0.5) !important; }
+
+/* Dividers */
+.dark .divide-gray-100 > * + * { border-color: rgba(255,255,255,0.08) !important; }
+.dark .divide-gray-200 > * + * { border-color: rgba(255,255,255,0.08) !important; }
+
+/* Ring colors */
+.dark .ring-gray-100 { --tw-ring-color: rgba(255,255,255,0.08) !important; }
+.dark .ring-gray-200 { --tw-ring-color: rgba(255,255,255,0.12) !important; }
+
+/* Focus states */
+.dark .focus\:ring-gray-100:focus { --tw-ring-color: rgba(255,255,255,0.08) !important; }
+.dark .focus\:ring-gray-200:focus { --tw-ring-color: rgba(255,255,255,0.12) !important; }
+
+/* Tables */
+.dark table { background-color: var(--bg-card-dark) !important; }
+.dark th { background-color: var(--bg-secondary-dark) !important; color: #D1D5DB !important; }
+.dark td { background-color: var(--bg-card-dark) !important; color: #E5E7EB !important; }
+.dark tbody tr:hover { background-color: #374151 !important; }
+
+/* Modals & Overlays */
+.dark .backdrop-blur-sm { background-color: rgba(0,0,0,0.6) !important; }
+
+/* Alerts */
+.dark .bg-red-50 { background-color: rgba(239,68,68,0.1) !important; }
+.dark .bg-green-50 { background-color: rgba(34,197,94,0.1) !important; }
+.dark .bg-yellow-50 { background-color: rgba(234,179,8,0.1) !important; }
+.dark .bg-blue-50 { background-color: rgba(59,130,246,0.1) !important; }
+.dark .bg-orange-50 { background-color: rgba(249,115,22,0.1) !important; }
+.dark .bg-purple-50 { background-color: rgba(168,85,247,0.1) !important; }
+
+/* Scrollbar optimisé */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* ========================================
+   CARDS MODERNES - Design SIGEC
+   ======================================== */
+.card {
+  background-color: var(--bg-card-light);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-light);
+  transition: all 0.2s ease;
+}
+
+.dark .card {
+  background-color: var(--bg-card-dark);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0px 2px 8px rgba(0,0,0,0.3);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+.dark .card:hover {
+  box-shadow: 0px 4px 16px rgba(0,0,0,0.4);
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* Card compacte - max 800px */
+.card-compact {
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Panels et sections */
+.panel {
+  background-color: var(--bg-card-light);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-light);
+  padding: 24px;
+}
+
+.dark .panel {
+  background-color: var(--bg-card-dark);
+  border-color: rgba(255,255,255,0.08);
+}
+
+/* ========================================
+   BOUTONS MODERNES - Icônes + texte minimal
+   ======================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--color-brand);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #3451DB;
+  box-shadow: 0 4px 12px rgba(63, 94, 251, 0.3);
+}
+
+.btn-secondary {
+  background-color: var(--bg-card-light);
+  color: var(--text-light);
+  border: 1px solid var(--border-light);
+}
+
+.dark .btn-secondary {
+  background-color: var(--bg-secondary-dark);
+  color: var(--text-dark);
+  border-color: var(--border-dark);
+}
+
+.btn-danger {
+  background-color: #EF4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #DC2626;
+}
+
+.btn-success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+/* Bouton icône seul (carré) */
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+/* ========================================
+   STAT CARDS - Design moderne
+   ======================================== */
+.stat-card {
+  background-color: var(--bg-card-light);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-card);
+}
+
+.dark .stat-card {
+  background-color: var(--bg-card-dark);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.stat-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========================================
+   CONTENEUR PRINCIPAL - Largeur limitée
+   ======================================== */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 16px;
+  }
+}
+
+/* Section avec espacement */
+.section {
+  margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.dark .section-title {
+  color: var(--text-dark);
+}
+
+/* ========================================
+   TABLES - Adaptées aux deux modes
+   ======================================== */
+.table-container {
+  @apply overflow-x-auto -mx-4 sm:mx-0 bg-white dark:bg-gray-800 rounded-xl;
+}
+
+.dark .table-container {
+  @apply bg-gray-800;
+}
+
+.table-responsive {
+  @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
+}
+
+.table-responsive th {
+  @apply px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-900;
+}
+
+.dark .table-responsive th {
+  @apply bg-gray-900 text-gray-300;
+}
+
+.table-responsive td {
+  @apply px-4 py-3 text-sm text-gray-800 dark:text-gray-200 whitespace-nowrap bg-white dark:bg-gray-800;
+}
+
+.dark .table-responsive td {
+  @apply bg-gray-800 text-gray-200;
+}
+
+.table-responsive tbody tr {
+  @apply hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors;
+}
+
+.dark .table-responsive tbody tr {
+  @apply hover:bg-gray-700;
+}
+
+/* Mobile card mode pour tables */
+@media (max-width: 640px) {
+  .table-card-mobile tbody {
+    @apply flex flex-col gap-3;
+  }
+  
+  .table-card-mobile tbody tr {
+    @apply flex flex-col p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700;
+  }
+  
+  .table-card-mobile tbody td {
+    @apply flex justify-between items-center py-1 px-0 border-0;
+  }
+  
+  .table-card-mobile tbody td::before {
+    content: attr(data-label);
+    @apply font-medium text-gray-500 dark:text-gray-400 text-xs uppercase;
+  }
+  
+  .table-card-mobile thead {
+    @apply hidden;
+  }
+}
+
+/* Boutons optimisés */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply bg-brand-600 hover:bg-brand-700 text-white focus:ring-brand-500 shadow-sm hover:shadow;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 focus:ring-gray-500;
+}
+
+.btn-success {
+  @apply bg-green-600 hover:bg-green-700 text-white focus:ring-green-500 shadow-sm;
+}
+
+.btn-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 shadow-sm;
+}
+
+.btn-ghost {
+  @apply bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300;
+}
+
+.btn-sm {
+  @apply px-3 py-1.5 text-xs;
+}
+
+.btn-lg {
+  @apply px-6 py-3 text-base;
+}
+
+/* Inputs optimisés */
+.input {
+  @apply w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-200;
+}
+
+.input-error {
+  @apply border-red-500 focus:ring-red-500;
+}
+
+/* ========================================
+   MODALS - Adaptées aux deux modes
+   ======================================== */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+  animation: fade-in 0.2s ease-out;
+}
+
+.modal-content {
+  @apply bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden;
+  animation: scale-in 0.2s ease-out;
+}
+
+.dark .modal-content {
+  @apply bg-gray-800 border border-gray-700;
+}
+
+.modal-header {
+  @apply px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900;
+}
+
+.dark .modal-header {
+  @apply bg-gray-900 border-gray-700;
+}
+
+.modal-body {
+  @apply px-6 py-4 overflow-y-auto bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100;
+}
+
+.dark .modal-body {
+  @apply bg-gray-800 text-gray-100;
+}
+
+.modal-footer {
+  @apply px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-900;
+}
+
+.dark .modal-footer {
+  @apply bg-gray-900 border-gray-700;
+}
+
+/* Stats cards */
+.stat-card {
+  @apply card p-5 flex items-center gap-4;
+}
+
+.stat-icon {
+  @apply w-12 h-12 rounded-xl flex items-center justify-center text-white;
+}
+
+.stat-value {
+  @apply text-2xl font-bold text-gray-900 dark:text-white;
+}
+
+.stat-label {
+  @apply text-sm text-gray-500 dark:text-gray-400;
+}
+
+/* Navigation sidebar */
+.sidebar {
+  @apply hidden md:flex md:flex-col md:w-64 bg-gradient-to-b from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black text-white transition-all duration-300;
+}
+
+.sidebar-link {
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-all duration-200 text-sm font-medium text-gray-300 hover:text-white;
+}
+
+.sidebar-link.active {
+  @apply bg-brand-600 text-white;
+}
+
+/* Mobile menu */
+.mobile-menu {
+  @apply fixed inset-0 z-50 md:hidden;
+}
+
+.mobile-menu-overlay {
+  @apply absolute inset-0 bg-black/50 backdrop-blur-sm;
+}
+
+.mobile-menu-content {
+  @apply absolute left-0 top-0 bottom-0 w-72 bg-gray-900 shadow-2xl animate-slide-right;
+}
+
+/* Badges */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-success {
+  @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400;
+}
+
+.badge-danger {
+  @apply bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400;
+}
+
+.badge-info {
+  @apply bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400;
+}
+
+/* ========================================
+   POS - Interface Point de Vente
+   ======================================== */
+.pos-interface {
+  @apply h-screen flex flex-col bg-gray-50 dark:bg-gray-900;
+}
+
+.dark .pos-interface {
+  @apply bg-gray-900;
+}
+
+.pos-cart {
+  @apply flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-800;
+}
+
+.dark .pos-cart {
+  @apply bg-gray-800;
+}
+
+.pos-actions {
+  @apply p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex gap-2;
+}
+
+.dark .pos-actions {
+  @apply bg-gray-900 border-gray-700;
+}
+
+/* ========================================
+   UTILITAIRES - Mode clair attractif
+   ======================================== */
+/* Fond principal avec dégradé subtil */
+.bg-page {
+  @apply bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800;
+}
+
+.dark .bg-page {
+  background: linear-gradient(to bottom right, #0f172a, #1e1b4b, #0f172a);
+}
+
+/* Conteneur principal */
+.main-container {
+  @apply bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6;
+}
+
+.dark .main-container {
+  @apply bg-gray-800 border-gray-700;
+}
+
+/* Texte forcé en noir sur fond clair */
+.text-on-light {
+  @apply text-gray-900 dark:text-gray-100;
+}
+
+/* Headers de section */
+.section-header {
+  @apply text-xl font-bold text-gray-900 dark:text-white mb-4;
+}
+
+/* Dividers */
+.divider {
+  @apply border-t border-gray-200 dark:border-gray-700 my-4;
+}
+
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-right {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+.animate-slide-right {
+  animation: slide-right 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Loading skeleton */
+.skeleton {
+  @apply bg-gray-200 dark:bg-gray-700 rounded animate-pulse;
+}
+
+/* Focus visible */
+*:focus-visible {
+  @apply outline-none ring-2 ring-brand-500 ring-offset-2 dark:ring-offset-gray-900;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS OPTIMISÉS
+   ======================================== */
+
+/* Extra small devices (phones, less than 640px) */
+@media (max-width: 639px) {
+  .container { padding-left: 1rem; padding-right: 1rem; }
+  .text-responsive { font-size: 0.875rem; }
+  .btn-responsive { padding: 0.5rem 0.75rem; font-size: 0.75rem; }
+  .card-responsive { padding: 0.75rem; }
+  .grid-responsive { grid-template-columns: 1fr; }
+}
+
+/* Small devices (landscape phones, 640px and up) */
+@media (min-width: 640px) and (max-width: 767px) {
+  .container { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .text-responsive { font-size: 0.9375rem; }
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container { padding-left: 2rem; padding-right: 2rem; }
+}
+
+/* Large devices (desktops, 1024px and up) */
+@media (min-width: 1024px) {
+  .container { padding-left: 2.5rem; padding-right: 2.5rem; }
+}
+
+/* ========================================
+   ANIMATIONS PERFORMANCE OPTIMISÉES
+   ======================================== */
+
+/* Réduire les animations si préférence utilisateur */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Animation de chargement rapide */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0) 0%, 
+    rgba(255,255,255,0.2) 50%, 
+    rgba(255,255,255,0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0) 0%, 
+    rgba(255,255,255,0.05) 50%, 
+    rgba(255,255,255,0) 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Pulse subtil pour notifications */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Bounce léger pour boutons */
+@keyframes bounce-light {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.hover\:animate-bounce-light:hover {
+  animation: bounce-light 0.3s ease-in-out;
+}
+
+/* ========================================
+   UTILITAIRES SUPPLÉMENTAIRES
+   ======================================== */
+
+/* Scrollbar personnalisée */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.7);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dark .glass {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, #FF9F43 0%, #FF6B35 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.dark .card-hover:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+}
+
+/* Button press effect */
+.btn-press:active {
+  transform: scale(0.98);
+}
+
+/* Truncate multi-line */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Safe area for mobile */
+.safe-area-inset {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Touch-friendly tap targets */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

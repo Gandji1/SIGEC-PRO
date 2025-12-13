@@ -1,0 +1,12 @@
+.git
+.gitignore
+README.md
+docs
+backend
+frontend
+infra
+scripts
+*.log
+.env.local
+.next
+node_modules
