@@ -38,6 +38,7 @@ class Tenant extends Model
         'stock_policy',
         'payment_methods',
         'pos_configuration',
+        'pos_option',
     ];
 
     protected $casts = [
@@ -155,6 +156,24 @@ class Tenant extends Model
     public function isModeB(): bool
     {
         return $this->business_type === 'restaurant' || $this->business_type === 'bar' || $this->business_type === 'B';
+    }
+
+    /**
+     * Option A = Serveurs envoient commandes au gérant qui sert et valide directement
+     * (Les serveurs ne disposent pas de stock)
+     */
+    public function isOptionA(): bool
+    {
+        return ($this->pos_option ?? 'A') === 'A';
+    }
+
+    /**
+     * Option B = Gérant délègue un stock aux serveurs qui le vendent
+     * et font le point au gérant à la fin de leur service
+     */
+    public function isOptionB(): bool
+    {
+        return ($this->pos_option ?? 'A') === 'B';
     }
 
     /**

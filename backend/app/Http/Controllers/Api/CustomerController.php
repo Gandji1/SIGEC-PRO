@@ -11,16 +11,18 @@ class CustomerController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID');
+        $tenantId = $request->header('X-Tenant-ID') ?? auth()->guard('sanctum')->user()?->tenant_id;
+        $perPage = min($request->query('per_page', 50), 200);
         
-        $query = Customer::where('tenant_id', $tenantId);
+        $query = Customer::where('tenant_id', $tenantId)
+            ->select(['id', 'name', 'email', 'phone', 'category', 'credit_limit', 'created_at']);
 
         if ($request->has('search')) {
             $search = $request->query('search');
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%")
-                  ->orWhere('phone', 'like', "%$search%");
+                $q->where('name', 'ilike', "%$search%")
+                  ->orWhere('email', 'ilike', "%$search%")
+                  ->orWhere('phone', 'ilike', "%$search%");
             });
         }
 
@@ -28,8 +30,7 @@ class CustomerController extends Controller
             $query->where('category', $request->query('category'));
         }
 
-        $customers = $query->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $customers = $query->orderBy('name')->paginate($perPage);
 
         return response()->json($customers);
     }

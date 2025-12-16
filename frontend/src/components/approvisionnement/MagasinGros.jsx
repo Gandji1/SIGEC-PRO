@@ -1,23 +1,34 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { KPI, NavBtn, Card, Empty, StatusBadge, PriorityBadge, MovementBadge } from './UIComponents';
 import { PurchaseModal, ReceiveModal } from './Modals';
 import { formatCurrency, formatDate, formatDateTime } from './utils';
 import apiClient from '../../services/apiClient';
 
-// Cache local ultra-rapide avec TTL plus long
-const cache = new Map();
-const CACHE_TTL = 300000; // 5 minutes pour réduire les appels API
-const getCache = (k) => { const c = cache.get(k); return c && Date.now() - c.t < CACHE_TTL ? c.d : null; };
-const setCache = (k, d) => cache.set(k, { d, t: Date.now() });
+// Cache global persistant (survit aux re-renders)
+// Reset à chaque chargement de page pour éviter les données stales
+const globalCache = {
+  products: [],
+  suppliers: [],
+  dashboard: {},
+  loaded: false,
+};
+
+// Fonction pour forcer le rechargement
+export const resetGlobalCache = () => {
+  globalCache.products = [];
+  globalCache.suppliers = [];
+  globalCache.dashboard = {};
+  globalCache.loaded = false;
+};
 
 export default function MagasinGros({ headers, warehouse, userRole }) {
-  // Seul le Gérant peut effectuer des actions d'écriture (pas le Tenant/Owner)
-  const canEdit = userRole === 'manager' || userRole === 'super_admin';
+  const canEdit = ['manager', 'super_admin', 'owner', 'tenant'].includes(userRole);
+  const canCreatePurchase = ['manager', 'gerant', 'super_admin'].includes(userRole);
   
   const [section, setSection] = useState('dashboard');
-  const [dashboard, setDashboard] = useState(getCache('gros_dash') || {});
-  const [suppliers, setSuppliers] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [dashboard, setDashboard] = useState(globalCache.dashboard);
+  const [suppliers, setSuppliers] = useState(globalCache.suppliers);
+  const [products, setProducts] = useState(globalCache.products);
   const [purchases, setPurchases] = useState([]);
   const [requests, setRequests] = useState([]);
   const [movements, setMovements] = useState([]);
@@ -25,64 +36,63 @@ export default function MagasinGros({ headers, warehouse, userRole }) {
   const [inventories, setInventories] = useState([]);
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [tableLoading, setTableLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(!globalCache.loaded);
+  const [dataReady, setDataReady] = useState(globalCache.loaded);
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0],
   });
 
-  // Charger les données avec cache local pour affichage instantané
+  // Charger les données au montage - toujours recharger pour avoir les données fraîches
   useEffect(() => {
     let isMounted = true;
     
-    // Afficher immédiatement les données du cache local
-    const cachedDash = getCache('gros_dash');
-    if (cachedDash) {
-      setDashboard(cachedDash);
-      setTableLoading(false);
-    }
+    // Réinitialiser le cache pour forcer le rechargement
+    globalCache.loaded = false;
     
-    const loadData = async () => {
-      // Charger le dashboard
+    const loadAllData = async () => {
       try {
-        const dashRes = await apiClient.get('/approvisionnement/gros/dashboard');
-        if (isMounted) {
-          setDashboard(dashRes.data || {});
-          setCache('gros_dash', dashRes.data);
-        }
-      } catch (e) {
-        console.error('[MagasinGros] Dashboard error:', e);
-      }
-      
-      if (isMounted) setTableLoading(false);
-      
-      // Charger les autres données en arrière-plan
-      try {
-        const [suppRes, prodRes, purchRes, reqRes] = await Promise.allSettled([
+        // Charger TOUTES les données en parallèle
+        const [dashRes, suppRes, prodRes, purchRes, reqRes] = await Promise.allSettled([
+          apiClient.get('/approvisionnement/gros/dashboard'),
           apiClient.get('/suppliers?per_page=100'),
-          apiClient.get('/products?per_page=200'),
+          apiClient.get('/products?per_page=100'),
           apiClient.get('/approvisionnement/purchases?per_page=50'),
           apiClient.get('/approvisionnement/requests?status=requested&per_page=50'),
         ]);
         
         if (!isMounted) return;
         
-        const suppData = suppRes?.status === 'fulfilled' ? (suppRes.value.data?.data || suppRes.value.data || []) : [];
-        const prodData = prodRes?.status === 'fulfilled' ? (prodRes.value.data?.data || prodRes.value.data || []) : [];
-        const purchData = purchRes?.status === 'fulfilled' ? (purchRes.value.data?.data || purchRes.value.data || []) : [];
-        const reqData = reqRes?.status === 'fulfilled' ? (reqRes.value.data?.data || reqRes.value.data || []) : [];
+        // Extraire les données
+        const dashData = dashRes.status === 'fulfilled' ? (dashRes.value.data || {}) : {};
+        const suppData = suppRes.status === 'fulfilled' ? (suppRes.value.data?.data || suppRes.value.data || []) : [];
+        const prodData = prodRes.status === 'fulfilled' ? (prodRes.value.data?.data || prodRes.value.data || []) : [];
+        const purchData = purchRes.status === 'fulfilled' ? (purchRes.value.data?.data || purchRes.value.data || []) : [];
+        const reqData = reqRes.status === 'fulfilled' ? (reqRes.value.data?.data || reqRes.value.data || []) : [];
         
-        setSuppliers(Array.isArray(suppData) ? suppData : []);
-        setProducts(Array.isArray(prodData) ? prodData : []);
+        // Stocker dans le cache global
+        globalCache.dashboard = dashData;
+        globalCache.products = Array.isArray(prodData) ? prodData : [];
+        globalCache.suppliers = Array.isArray(suppData) ? suppData : [];
+        globalCache.loaded = true;
+        
+        // Mettre à jour le state
+        setDashboard(dashData);
+        setProducts(globalCache.products);
+        setSuppliers(globalCache.suppliers);
         setPurchases(Array.isArray(purchData) ? purchData : []);
         setRequests(Array.isArray(reqData) ? reqData : []);
+        setDataReady(true);
+        
+        console.log('[MagasinGros] Données chargées:', { products: globalCache.products.length, suppliers: globalCache.suppliers.length });
       } catch (e) {
-        console.error('[MagasinGros] Background load error:', e);
+        console.error('[MagasinGros] Erreur chargement:', e);
+      } finally {
+        if (isMounted) setTableLoading(false);
       }
     };
     
-    if (!cachedDash) setTableLoading(true);
-    loadData();
+    loadAllData();
     
     return () => { isMounted = false; };
   }, []);
@@ -217,7 +227,8 @@ export default function MagasinGros({ headers, warehouse, userRole }) {
     }
   };
 
-  const pendingPO = useMemo(() => purchases.filter(p => ['ordered', 'partial', 'confirmed'].includes(p.status)), [purchases]);
+  // Commandes en attente de réception: submitted (chez fournisseur), confirmed, shipped, delivered
+  const pendingPO = useMemo(() => purchases.filter(p => ['submitted', 'ordered', 'partial', 'confirmed', 'shipped', 'delivered'].includes(p.status)), [purchases]);
 
   // RENDU INSTANTANÉ - Pas de loading global
   return (
@@ -243,32 +254,14 @@ export default function MagasinGros({ headers, warehouse, userRole }) {
         <NavBtn active={section === 'stocks'} onClick={() => setSection('stocks')} icon="📦" label="Stock" />
         <NavBtn active={section === 'inventory'} onClick={() => setSection('inventory')} icon="📋" label="Inventaire" />
         <div className="flex-1" />
-        {/* Bouton Nouvelle Commande - Visible uniquement pour le Gérant */}
-        {canEdit && (
-          <button onClick={async () => {
-            setModal('purchase');
-            // Charger produits et fournisseurs si pas encore chargés
-            if (products.length === 0 || suppliers.length === 0) {
-              try {
-                const [prodRes, suppRes] = await Promise.allSettled([
-                  apiClient.get('/products?per_page=200'),
-                  apiClient.get('/suppliers?per_page=100'),
-                ]);
-                if (prodRes.status === 'fulfilled') {
-                  setProducts(prodRes.value.data?.data || prodRes.value.data || []);
-                }
-                if (suppRes.status === 'fulfilled') {
-                  setSuppliers(suppRes.value.data?.data || suppRes.value.data || []);
-                }
-                console.log('[MagasinGros] Modal data loaded');
-              } catch (e) {
-                console.error('[MagasinGros] Erreur chargement modal:', e);
-                alert('Erreur lors du chargement des données');
-                setModal(null);
-              }
-            }
-          }} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
-            + Nouvelle Commande
+        {/* Bouton Nouvelle Commande - Visible uniquement pour le Gérant (pas tenant) */}
+        {canCreatePurchase && (
+          <button 
+            disabled={!dataReady}
+            onClick={() => setModal('purchase')} 
+            className={`px-4 py-2 rounded-lg font-medium ${dataReady ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-400 text-white cursor-wait'}`}
+          >
+            {dataReady ? '+ Nouvelle Commande' : '⏳ Chargement...'}
           </button>
         )}
       </div>
@@ -361,16 +354,8 @@ export default function MagasinGros({ headers, warehouse, userRole }) {
       )}
 
       {/* MODALS */}
-      {modal === 'purchase' && suppliers.length > 0 && products.length > 0 && (
+      {modal === 'purchase' && (
         <PurchaseModal headers={headers} suppliers={suppliers} products={products} warehouseId={warehouse?.id} onClose={() => setModal(null)} onSaved={() => { setModal(null); refresh(); }} />
-      )}
-      {modal === 'purchase' && (suppliers.length === 0 || products.length === 0) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Chargement des données...</p>
-          </div>
-        </div>
       )}
       {modal === 'receive' && selected && (
         <ReceiveModal headers={headers} purchase={selected} onClose={() => { setModal(null); setSelected(null); }} onSaved={() => { setModal(null); setSelected(null); refresh(); }} />
@@ -480,7 +465,7 @@ const SuppliersSection = memo(({ suppliers, loading }) => (
 ));
 
 const PurchasesSection = memo(({ purchases, submitPO, submitForApproval, approveByTenant, rejectByTenant, onReceive, loading, canEdit }) => (
-  <Card title="📋 Commandes Fournisseurs" subtitle="Flux: Gérant crée → Tenant approuve → Fournisseur reçoit → Livraison → Réception">
+  <Card title="📋 Commandes Fournisseurs" subtitle="Flux: Gérant crée → Fournisseur approuve/sert → Gérant réceptionne">
     {loading ? <TableSkeleton /> : (
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -497,7 +482,7 @@ const PurchasesSection = memo(({ purchases, submitPO, submitForApproval, approve
           </thead>
           <tbody className="divide-y">
             {purchases.map(p => (
-              <tr key={p.id} className="hover:bg-gray-50">
+              <tr key={p.id} className={`hover:bg-gray-50 ${p.status === 'delivered' ? 'bg-green-50' : ''}`}>
                 <td className="px-4 py-3 font-mono font-medium text-blue-600">{p.reference}</td>
                 <td className="px-4 py-3">{p.supplier?.name || p.supplier_name || '-'}</td>
                 <td className="px-4 py-3 text-gray-600">{formatDate(p.created_at)}</td>
@@ -507,31 +492,50 @@ const PurchasesSection = memo(({ purchases, submitPO, submitForApproval, approve
                 {canEdit && (
                   <td className="px-4 py-3">
                     <div className="flex gap-2 flex-wrap">
-                      {/* Brouillon: Gérant soumet pour approbation */}
-                      {(p.status === 'draft' || p.status === 'pending') && (
+                      {/* Brouillon sans fournisseur: Soumettre manuellement */}
+                      {p.status === 'draft' && (
                         <button onClick={() => submitForApproval(p.id)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
-                          📤 Soumettre
+                          📤 Envoyer au fournisseur
                         </button>
                       )}
-                      {/* En attente d'approbation: Tenant approuve ou rejette */}
-                      {p.status === 'pending_approval' && (
-                        <>
-                          <button onClick={() => approveByTenant(p.id)} className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
-                            ✓ Approuver
-                          </button>
-                          <button onClick={() => rejectByTenant(p.id)} className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200">
-                            ✗ Rejeter
-                          </button>
-                        </>
+                      {/* Chez fournisseur: En attente d'action fournisseur */}
+                      {p.status === 'submitted' && (
+                        <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded text-sm">
+                          ⏳ Attente fournisseur
+                        </span>
                       )}
-                      {/* Livré: Réceptionner */}
+                      {/* Confirmé par fournisseur: En préparation */}
+                      {p.status === 'confirmed' && (
+                        <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded text-sm">
+                          🔄 En préparation
+                        </span>
+                      )}
+                      {/* Préparé/Expédié: En cours de livraison */}
+                      {p.status === 'shipped' && (
+                        <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded text-sm">
+                          🚚 En livraison
+                        </span>
+                      )}
+                      {/* LIVRÉ: BOUTON RÉCEPTIONNER ACTIF */}
                       {p.status === 'delivered' && (
-                        <button onClick={() => onReceive(p)} className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
-                          📥 Réceptionner
+                        <button onClick={() => onReceive(p)} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 animate-pulse">
+                          📥 RÉCEPTIONNER
                         </button>
+                      )}
+                      {/* Réceptionné */}
+                      {p.status === 'received' && (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
+                          ✓ Réceptionné
+                        </span>
+                      )}
+                      {/* Payé */}
+                      {p.status === 'paid' && (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm font-medium">
+                          ✓ Terminé
+                        </span>
                       )}
                       {/* Ancien flux pour compatibilité */}
-                      {['ordered', 'partial', 'confirmed'].includes(p.status) && (
+                      {['ordered', 'partial'].includes(p.status) && (
                         <button onClick={() => onReceive(p)} className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200">
                           📥 Réceptionner
                         </button>
@@ -550,42 +554,125 @@ const PurchasesSection = memo(({ purchases, submitPO, submitForApproval, approve
 ));
 
 function ReceptionSection({ purchases, onReceive, canEdit }) {
+  // Séparer les commandes par priorité de réception
+  // 1. Livrées (delivered) = PRÊTES À RÉCEPTIONNER
+  // 2. Expédiées (shipped) = En cours de livraison
+  // 3. Confirmées (confirmed) = En préparation
+  // 4. Soumises (submitted) = Chez fournisseur
+  const readyToReceive = purchases.filter(p => p.status === 'delivered');
+  const inTransit = purchases.filter(p => p.status === 'shipped');
+  const inPreparation = purchases.filter(p => ['confirmed', 'submitted', 'ordered'].includes(p.status));
+  
   return (
-    <Card title="📥 Réception des Commandes" subtitle="Commandes en attente de réception">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Référence</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fournisseur</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date Commande</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Articles</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
-              {canEdit && <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {purchases.map(p => (
-              <tr key={p.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono font-medium text-blue-600">{p.reference}</td>
-                <td className="px-4 py-3">{p.supplier?.name || p.supplier_name}</td>
-                <td className="px-4 py-3 text-gray-600">{formatDate(p.created_at)}</td>
-                <td className="px-4 py-3">{p.items?.length || 0} produits</td>
-                <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
-                {canEdit && (
-                  <td className="px-4 py-3">
-                    <button onClick={() => onReceive(p)} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">
-                      📥 Réceptionner
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {purchases.length === 0 && <Empty msg="Aucune commande en attente de réception" />}
-      </div>
-    </Card>
+    <div className="space-y-6">
+      {/* COMMANDES PRÊTES À RÉCEPTIONNER */}
+      <Card title="✅ Prêtes à Réceptionner" subtitle="Commandes livrées par le fournisseur - Action requise">
+        {readyToReceive.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-green-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Référence</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fournisseur</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Articles</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Paiement</th>
+                  {canEdit && <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {readyToReceive.map(p => (
+                  <tr key={p.id} className="bg-green-50 hover:bg-green-100">
+                    <td className="px-4 py-3 font-mono font-bold text-green-700">{p.reference}</td>
+                    <td className="px-4 py-3 font-medium">{p.supplier?.name || p.supplier_name}</td>
+                    <td className="px-4 py-3 font-bold">{formatCurrency(p.total)}</td>
+                    <td className="px-4 py-3">{p.items?.length || 0} produits</td>
+                    <td className="px-4 py-3">
+                      {p.payment_validated_by_supplier ? (
+                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">✓ Payé</span>
+                      ) : (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">En attente</span>
+                      )}
+                    </td>
+                    {canEdit && (
+                      <td className="px-4 py-3">
+                        <button 
+                          onClick={() => onReceive(p)} 
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 animate-pulse shadow-lg"
+                        >
+                          📥 RÉCEPTIONNER
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-lg">Aucune commande prête à réceptionner</p>
+            <p className="text-sm mt-2">Les commandes apparaîtront ici une fois livrées par le fournisseur</p>
+          </div>
+        )}
+      </Card>
+
+      {/* COMMANDES EN TRANSIT */}
+      {inTransit.length > 0 && (
+        <Card title="🚚 En Livraison" subtitle="Commandes expédiées par le fournisseur">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-purple-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Référence</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fournisseur</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {inTransit.map(p => (
+                  <tr key={p.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono font-medium text-purple-600">{p.reference}</td>
+                    <td className="px-4 py-3">{p.supplier?.name || p.supplier_name}</td>
+                    <td className="px-4 py-3 font-medium">{formatCurrency(p.total)}</td>
+                    <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* COMMANDES EN PRÉPARATION */}
+      {inPreparation.length > 0 && (
+        <Card title="⏳ En Préparation" subtitle="Commandes en cours de traitement par le fournisseur">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-blue-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Référence</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fournisseur</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {inPreparation.map(p => (
+                  <tr key={p.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono font-medium text-blue-600">{p.reference}</td>
+                    <td className="px-4 py-3">{p.supplier?.name || p.supplier_name}</td>
+                    <td className="px-4 py-3 font-medium">{formatCurrency(p.total)}</td>
+                    <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }
 

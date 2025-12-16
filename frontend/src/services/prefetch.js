@@ -60,11 +60,13 @@ async function processPrefetchQueue() {
  * Appelé une fois après le login
  */
 export async function prefetchEssentialData() {
-  // Données critiques à précharger immédiatement
+  // Données critiques à précharger immédiatement (parallèle pour vitesse max)
   const essentialEndpoints = [
     { key: CACHE_KEYS.PRODUCTS_ACTIVE, endpoint: '/products', params: { per_page: 500, status: 'active' } },
     { key: CACHE_KEYS.WAREHOUSES, endpoint: '/warehouses', params: { per_page: 100 } },
     { key: CACHE_KEYS.DASHBOARD_STATS, endpoint: '/dashboard/stats', params: {} },
+    { key: CACHE_KEYS.CUSTOMERS, endpoint: '/customers', params: { per_page: 200 } },
+    { key: CACHE_KEYS.LOW_STOCK, endpoint: '/stocks/low-stock', params: {} },
   ];
 
   // Charger en parallèle

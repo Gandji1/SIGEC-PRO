@@ -4,63 +4,41 @@ import { RequestModal, ServeModal } from './Modals';
 import { formatCurrency, formatDate } from './utils';
 import apiClient from '../../services/apiClient';
 
+// Cache global persistant (survit aux re-renders)
+const globalDetailCache = {
+  products: [],
+  dashboard: {},
+  loaded: false,
+};
+
 export default function MagasinDetail({ headers, warehouse, grosWarehouse, userRole }) {
-  // Seul le Gérant peut effectuer des actions d'écriture (pas le Tenant/Owner)
-  const canEdit = userRole === 'manager' || userRole === 'super_admin';
+  const canEdit = ['manager', 'super_admin', 'owner', 'tenant'].includes(userRole);
   
   const [section, setSection] = useState('dashboard');
-  const [dashboard, setDashboard] = useState({});
-  const [products, setProducts] = useState([]);
+  const [dashboard, setDashboard] = useState(globalDetailCache.dashboard);
+  const [products, setProducts] = useState(globalDetailCache.products);
   const [requests, setRequests] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [stocks, setStocks] = useState([]);
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [tableLoading, setTableLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(!globalDetailCache.loaded);
+  const [dataReady, setDataReady] = useState(globalDetailCache.loaded);
 
-  // Cache local simple
-  const getCache = (key) => {
-    try {
-      const item = localStorage.getItem(`detail_${key}`);
-      if (item) return JSON.parse(item);
-    } catch {}
-    return null;
-  };
-  const setCache = (key, data) => {
-    try { localStorage.setItem(`detail_${key}`, JSON.stringify(data)); } catch {}
-  };
-
-  // Charger les données avec cache local pour affichage instantané
+  // Charger les données au montage - toujours recharger pour avoir les données fraîches
   useEffect(() => {
     let isMounted = true;
     const wid = warehouse?.id || '';
     
-    // Afficher immédiatement les données du cache local
-    const cachedDash = getCache('dash');
-    if (cachedDash) {
-      setDashboard(cachedDash);
-      setTableLoading(false);
-    }
+    // Réinitialiser le cache pour forcer le rechargement
+    globalDetailCache.loaded = false;
     
-    const loadData = async () => {
-      // Charger le dashboard
+    const loadAllData = async () => {
       try {
-        const dashRes = await apiClient.get('/approvisionnement/detail/dashboard');
-        if (isMounted) {
-          setDashboard(dashRes.data || {});
-          setCache('dash', dashRes.data);
-        }
-      } catch (e) {
-        console.error('[MagasinDetail] Dashboard error:', e);
-      }
-      
-      if (isMounted) setTableLoading(false);
-      
-      // Charger les autres données en arrière-plan
-      try {
-        const [prodRes, reqRes, transRes, ordRes] = await Promise.allSettled([
-          apiClient.get('/products?per_page=200'),
+        const [dashRes, prodRes, reqRes, transRes, ordRes] = await Promise.allSettled([
+          apiClient.get('/approvisionnement/detail/dashboard'),
+          apiClient.get('/products?per_page=100'),
           apiClient.get(`/approvisionnement/requests?from_warehouse_id=${wid}&per_page=50`),
           apiClient.get(`/approvisionnement/transfers?to_warehouse_id=${wid}&per_page=50`),
           apiClient.get('/pos/orders?status=pending&per_page=50'),
@@ -68,22 +46,35 @@ export default function MagasinDetail({ headers, warehouse, grosWarehouse, userR
         
         if (!isMounted) return;
         
+        // Extraire les données
+        const dashData = dashRes.status === 'fulfilled' ? (dashRes.value.data || {}) : {};
         const prodData = prodRes.status === 'fulfilled' ? (prodRes.value.data?.data || prodRes.value.data || []) : [];
         const reqData = reqRes.status === 'fulfilled' ? (reqRes.value.data?.data || reqRes.value.data || []) : [];
         const transData = transRes.status === 'fulfilled' ? (transRes.value.data?.data || transRes.value.data || []) : [];
         const ordData = ordRes.status === 'fulfilled' ? (ordRes.value.data?.data || ordRes.value.data || []) : [];
         
-        setProducts(Array.isArray(prodData) ? prodData : []);
+        // Stocker dans le cache global
+        globalDetailCache.dashboard = dashData;
+        globalDetailCache.products = Array.isArray(prodData) ? prodData : [];
+        globalDetailCache.loaded = true;
+        
+        // Mettre à jour le state
+        setDashboard(dashData);
+        setProducts(globalDetailCache.products);
         setRequests(Array.isArray(reqData) ? reqData : []);
         setTransfers(Array.isArray(transData) ? transData : []);
         setOrders(Array.isArray(ordData) ? ordData : []);
+        setDataReady(true);
+        
+        console.log('[MagasinDetail] Données chargées:', { products: globalDetailCache.products.length });
       } catch (e) {
-        console.error('[MagasinDetail] Background load error:', e);
+        console.error('[MagasinDetail] Erreur chargement:', e);
+      } finally {
+        if (isMounted) setTableLoading(false);
       }
     };
     
-    if (!cachedDash) setTableLoading(true);
-    loadData();
+    loadAllData();
     
     return () => { isMounted = false; };
   }, [warehouse?.id]);
@@ -196,22 +187,12 @@ export default function MagasinDetail({ headers, warehouse, grosWarehouse, userR
         <div className="flex-1" />
         {/* Bouton Nouvelle Demande - Visible uniquement pour le Gérant */}
         {canEdit && (
-          <button onClick={async () => {
-            setModal('request');
-            // Charger les produits si pas encore chargés
-            if (products.length === 0) {
-              try {
-                const res = await apiClient.get('/products?per_page=200');
-                setProducts(res.data?.data || res.data || []);
-                console.log('[MagasinDetail] Products loaded for modal');
-              } catch (e) {
-                console.error('[MagasinDetail] Erreur chargement:', e);
-                alert('Erreur lors du chargement des produits');
-                setModal(null);
-              }
-            }
-          }} className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700">
-            + Nouvelle Demande
+          <button 
+            disabled={!dataReady}
+            onClick={() => setModal('request')} 
+            className={`px-4 py-2 rounded-lg font-medium ${dataReady ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-400 text-white cursor-wait'}`}
+          >
+            {dataReady ? '+ Nouvelle Demande' : '⏳ Chargement...'}
           </button>
         )}
       </div>
@@ -238,16 +219,8 @@ export default function MagasinDetail({ headers, warehouse, grosWarehouse, userR
       )}
 
       {/* MODALS */}
-      {modal === 'request' && products.length > 0 && (
+      {modal === 'request' && (
         <RequestModal headers={headers} products={products} fromWarehouseId={warehouse?.id} toWarehouseId={grosWarehouse?.id} onClose={() => setModal(null)} onSaved={() => { setModal(null); refresh(); }} />
-      )}
-      {modal === 'request' && products.length === 0 && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Chargement des produits...</p>
-          </div>
-        </div>
       )}
       {modal === 'serve' && selected && (
         <ServeModal headers={headers} order={selected} warehouseId={warehouse?.id} onClose={() => { setModal(null); setSelected(null); }} onSaved={() => { setModal(null); setSelected(null); refresh(); }} />

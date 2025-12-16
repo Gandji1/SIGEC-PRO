@@ -210,6 +210,57 @@ export default function TenantConfigurationPage() {
                   </div>
                 </div>
 
+                {/* Option POS A/B - Workflow Serveurs */}
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Option de Gestion POS (Workflow Serveurs)
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition ${
+                      (config.pos_option || tenant?.pos_option || 'A') === 'A' 
+                        ? 'border-blue-500 bg-blue-100' 
+                        : 'border-gray-200 hover:border-blue-300'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="pos_option"
+                        value="A"
+                        checked={(config.pos_option || tenant?.pos_option || 'A') === 'A'}
+                        onChange={(e) => setConfig({ ...config, pos_option: 'A' })}
+                        className="mt-1 mr-3"
+                      />
+                      <div>
+                        <span className="font-semibold text-gray-800">Option A</span>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Les serveurs envoient les commandes au gérant qui sert et valide directement.
+                          <br /><strong>Serveurs sans stock.</strong>
+                        </p>
+                      </div>
+                    </label>
+                    <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition ${
+                      (config.pos_option || tenant?.pos_option || 'A') === 'B' 
+                        ? 'border-orange-500 bg-orange-100' 
+                        : 'border-gray-200 hover:border-orange-300'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="pos_option"
+                        value="B"
+                        checked={(config.pos_option || tenant?.pos_option || 'A') === 'B'}
+                        onChange={(e) => setConfig({ ...config, pos_option: 'B' })}
+                        className="mt-1 mr-3"
+                      />
+                      <div>
+                        <span className="font-semibold text-gray-800">Option B</span>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Le gérant délègue un stock aux serveurs qui vendent et font le point en fin de service.
+                          <br /><strong>Serveurs avec stock délégué.</strong>
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Adresse

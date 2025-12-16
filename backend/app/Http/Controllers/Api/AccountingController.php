@@ -17,22 +17,23 @@ class AccountingController extends Controller
 {
     protected function getTenantId(Request $request)
     {
-        // Priorité: header X-Tenant-ID, puis utilisateur authentifié, puis défaut à 1
-        $tenantId = $request->header('X-Tenant-ID');
+        // Priorité: utilisateur authentifié (sécurisé), puis header X-Tenant-ID (pour superadmin)
+        $user = auth()->guard('sanctum')->user();
         
-        if (!$tenantId) {
-            $user = auth()->guard('sanctum')->user();
-            $tenantId = $user?->tenant_id;
+        if ($user && $user->tenant_id) {
+            return (int) $user->tenant_id;
         }
         
-        // Fallback pour le développement - toujours utiliser tenant 1
-        if (!$tenantId) {
-            $tenantId = 1;
+        // SuperAdmin peut utiliser le header X-Tenant-ID pour impersonation
+        if ($user && in_array($user->role, ['super_admin', 'superadmin'])) {
+            $tenantId = $request->header('X-Tenant-ID');
+            if ($tenantId) {
+                return (int) $tenantId;
+            }
         }
         
-        \Log::info("AccountingController getTenantId: $tenantId");
-        
-        return (int) $tenantId;
+        // Pas de fallback - retourner null si pas de tenant
+        return null;
     }
 
     /**

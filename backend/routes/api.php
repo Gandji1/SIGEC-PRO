@@ -36,11 +36,23 @@ Route::get('/health', function () {
         'time' => now()->toISOString(),
     ]);
 });
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
 
-// 2FA verification (public - avant auth complète)
-Route::post('/2fa/verify', [\App\Http\Controllers\Api\TwoFactorController::class, 'verify']);
+// Routes d'authentification avec rate limiting
+Route::middleware('throttle.auth:register')->post('/register', [AuthController::class, 'register']);
+Route::middleware('throttle.auth:login')->post('/login', [AuthController::class, 'login']);
+
+// 2FA verification (public - avant auth complète) avec rate limiting
+Route::middleware('throttle.auth:2fa')->post('/2fa/verify', [\App\Http\Controllers\Api\TwoFactorController::class, 'verify']);
+
+// Password Reset routes (public) avec rate limiting
+Route::middleware('throttle.auth:login')->group(function () {
+    Route::post('/password/forgot', [\App\Http\Controllers\Api\PasswordResetController::class, 'sendResetLink']);
+    Route::post('/password/verify-token', [\App\Http\Controllers\Api\PasswordResetController::class, 'verifyToken']);
+    Route::post('/password/reset', [\App\Http\Controllers\Api\PasswordResetController::class, 'resetPassword']);
+});
+
+// Email Verification (public - pour vérifier avec token)
+Route::post('/email/verify', [\App\Http\Controllers\Api\EmailVerificationController::class, 'verifyEmail']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -48,6 +60,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
+
+    // Email Verification routes (authenticated)
+    Route::prefix('email')->group(function () {
+        Route::post('/send-verification', [\App\Http\Controllers\Api\EmailVerificationController::class, 'sendVerificationEmail']);
+        Route::get('/status', [\App\Http\Controllers\Api\EmailVerificationController::class, 'status']);
+    });
 
     // 2FA routes (authenticated)
     Route::prefix('2fa')->group(function () {
@@ -266,8 +284,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/customers/{customer}/statistics', [CustomerController::class, 'statistics']);
     });
 
-    // Supplier routes (Owner, Manager, Admin)
-    Route::middleware('role:owner,manager,admin,super_admin')->group(function () {
+    // Supplier routes (Owner, Manager, Admin, Tenant)
+    Route::middleware('role:owner,manager,admin,super_admin,tenant')->group(function () {
         Route::apiResource('suppliers', SupplierController::class);
         Route::get('/suppliers/{supplier}/statistics', [SupplierController::class, 'statistics']);
     });
@@ -672,13 +690,47 @@ Route::middleware('auth:sanctum')->prefix('inventory')->group(function () {
     Route::post('/generate-stock-request', [\App\Http\Controllers\Api\InventoryController::class, 'generateStockRequest']);
 });
 
-// Info tenant (mode A/B)
+// Info tenant (mode A/B et Option A/B)
 Route::middleware('auth:sanctum')->get('/tenant/mode', function () {
     $tenant = auth()->user()->tenant;
     return response()->json([
         'business_type' => $tenant->business_type,
         'is_mode_a' => $tenant->isModeA(),
         'is_mode_b' => $tenant->isModeB(),
+        'pos_option' => $tenant->pos_option ?? 'A',
     ]);
+});
+
+// ========================================
+// OPTION B: Stock délégué aux serveurs
+// ========================================
+Route::middleware('auth:sanctum')->prefix('server-stock')->group(function () {
+    // Liste des stocks délégués
+    Route::get('/', [\App\Http\Controllers\Api\ServerStockController::class, 'index']);
+    
+    // Mon stock (serveur)
+    Route::get('/my-stock', [\App\Http\Controllers\Api\ServerStockController::class, 'myStock']);
+    
+    // Déléguer du stock (gérant)
+    Route::post('/delegate', [\App\Http\Controllers\Api\ServerStockController::class, 'delegate']);
+    
+    // Enregistrer une vente (serveur)
+    Route::post('/sale', [\App\Http\Controllers\Api\ServerStockController::class, 'recordSale']);
+    
+    // Déclarer une perte (serveur)
+    Route::post('/loss', [\App\Http\Controllers\Api\ServerStockController::class, 'declareLoss']);
+    
+    // Mouvements de stock serveur
+    Route::get('/movements', [\App\Http\Controllers\Api\ServerStockController::class, 'movements']);
+    
+    // Statistiques (gérant)
+    Route::get('/statistics', [\App\Http\Controllers\Api\ServerStockController::class, 'statistics']);
+    
+    // Réconciliation (point de caisse serveur)
+    Route::post('/reconciliation/start', [\App\Http\Controllers\Api\ServerStockController::class, 'startReconciliation']);
+    Route::post('/reconciliation/{id}/submit', [\App\Http\Controllers\Api\ServerStockController::class, 'submitReconciliation']);
+    Route::get('/reconciliation/pending', [\App\Http\Controllers\Api\ServerStockController::class, 'pendingReconciliations']);
+    Route::post('/reconciliation/{id}/validate', [\App\Http\Controllers\Api\ServerStockController::class, 'validateReconciliation']);
+    Route::post('/reconciliation/{id}/dispute', [\App\Http\Controllers\Api\ServerStockController::class, 'disputeReconciliation']);
 });
 

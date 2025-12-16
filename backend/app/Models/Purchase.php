@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Purchase extends Model
 {
-    use HasFactory, SoftDeletes, BelongsToTenant;
+    use HasFactory, SoftDeletes, BelongsToTenant, Auditable;
 
     // Statuts du flux de commande:
     // draft -> pending_approval (attente approbation Tenant) -> submitted (envoyé au fournisseur)
@@ -60,6 +61,8 @@ class Purchase extends Model
         'supplier_notes',
         'tracking_number',
         'delivery_proof',
+        'payment_validated_by_supplier', // Flag: fournisseur confirme avoir reçu le paiement
+        'payment_validated_at',
     ];
 
     protected $casts = [
@@ -79,6 +82,8 @@ class Purchase extends Model
         'delivered_at' => 'datetime',
         'received_at' => 'datetime',
         'paid_at' => 'datetime',
+        'payment_validated_by_supplier' => 'boolean',
+        'payment_validated_at' => 'datetime',
     ];
 
     // Relations supplémentaires
@@ -104,12 +109,12 @@ class Purchase extends Model
 
     public function warehouse(): BelongsTo
     {
-        return $this->belongsTo(Warehouse::class)->nullable();
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function supplier(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class)->nullable();
+        return $this->belongsTo(Supplier::class);
     }
 
     public function items(): HasMany
@@ -136,8 +141,9 @@ class Purchase extends Model
 
     public function calculateTotals(): void
     {
-        $this->subtotal = $this->items()->sum('line_subtotal');
-        $this->tax_amount = $this->items()->sum('tax_amount');
-        $this->total = $this->subtotal + $this->tax_amount + $this->shipping_cost;
+        $this->subtotal = $this->items()->sum('line_subtotal') ?: 0;
+        $this->tax_amount = $this->items()->sum('tax_amount') ?: 0;
+        $this->total = $this->subtotal + ($this->tax_amount ?: 0) + ($this->shipping_cost ?: 0);
+        $this->save();
     }
 }

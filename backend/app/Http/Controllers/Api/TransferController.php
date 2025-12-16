@@ -25,9 +25,16 @@ class TransferController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tenant_id = auth()->guard('sanctum')->user()->tenant_id;
+        $perPage = min($request->query('per_page', 20), 100);
         
         $query = Transfer::where('tenant_id', $tenant_id)
-            ->with(['fromWarehouse', 'toWarehouse', 'items', 'items.product']);
+            ->select(['id', 'reference', 'from_warehouse_id', 'to_warehouse_id', 'status', 'requested_by', 'created_at'])
+            ->with([
+                'fromWarehouse:id,name,code',
+                'toWarehouse:id,name,code',
+                'items:id,transfer_id,product_id,quantity',
+                'items.product:id,name,code'
+            ]);
 
         if ($request->has('status')) {
             $query->where('status', $request->query('status'));
@@ -37,7 +44,7 @@ class TransferController extends Controller
             $query->where('from_warehouse_id', $request->query('from_warehouse_id'));
         }
 
-        $transfers = $query->latest()->paginate(20);
+        $transfers = $query->latest()->paginate($perPage);
 
         return response()->json($transfers);
     }
@@ -144,7 +151,14 @@ class TransferController extends Controller
         
         $transfers = Transfer::where('tenant_id', $tenant_id)
             ->where('status', 'pending')
-            ->with(['fromWarehouse', 'toWarehouse', 'items', 'requestedByUser'])
+            ->select(['id', 'reference', 'from_warehouse_id', 'to_warehouse_id', 'status', 'requested_by', 'created_at'])
+            ->with([
+                'fromWarehouse:id,name,code',
+                'toWarehouse:id,name,code',
+                'items:id,transfer_id,product_id,quantity',
+                'items.product:id,name,code',
+                'requestedByUser:id,name'
+            ])
             ->latest()
             ->paginate(20);
 

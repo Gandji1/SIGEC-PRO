@@ -59,6 +59,7 @@ class TenantConfigurationController extends Controller
                 'currency' => 'nullable|string|max:10',
                 'business_type' => 'nullable|in:retail,restaurant,bar,hotel,other',
                 'mode_pos' => 'nullable|in:A,B',
+                'pos_option' => 'nullable|in:A,B',
                 // Finances
                 'tva_rate' => 'nullable|numeric|min:0|max:100',
                 'default_markup' => 'nullable|numeric|min:0|max:1000',

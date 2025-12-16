@@ -36,13 +36,14 @@ class PurchaseService
             'user_id' => $user_id,
             'reference' => $this->generateReference($tenant_id),
             'supplier_id' => $data['supplier_id'] ?? null,
+            'warehouse_id' => $data['warehouse_id'] ?? null,
             'supplier_name' => $data['supplier_name'],
             'supplier_phone' => $data['supplier_phone'] ?? null,
             'supplier_email' => $data['supplier_email'] ?? null,
             'payment_method' => $data['payment_method'] ?? 'transfer',
             'expected_date' => $data['expected_date'] ?? null,
-            'status' => 'submitted', // Soumise au fournisseur - en attente de confirmation
-            'submitted_at' => now(),
+            'status' => Purchase::STATUS_DRAFT, // Brouillon - gérant doit soumettre pour approbation
+            'created_by_user_id' => $user_id,
         ]);
 
         AuditLog::log('create', 'purchase', $purchase->id, $data, 'Purchase created');
@@ -117,23 +118,27 @@ class PurchaseService
     {
         $purchase = Purchase::findOrFail($purchase_id);
         
+        // Déterminer le warehouse cible (celui de la commande ou le warehouse gros par défaut)
+        $warehouseId = $purchase->warehouse_id ?? $this->getDefaultWarehouse($purchase->tenant_id);
+        
         DB::beginTransaction();
         try {
             foreach ($purchase->items as $item) {
                 $this->updateStockWithCMP(
                     $purchase->tenant_id,
                     $item->product_id,
-                    $item->quantity_received,
-                    $item->unit_price
+                    $item->quantity_received ?? $item->quantity_ordered,
+                    $item->unit_price,
+                    $warehouseId
                 );
 
-                // Créer mouvementde stock
+                // Créer mouvement de stock
                 StockMovement::create([
                     'tenant_id' => $purchase->tenant_id,
                     'product_id' => $item->product_id,
-                    'warehouse_id' => 1, // Gros warehouse (default)
+                    'warehouse_id' => $warehouseId,
                     'type' => 'purchase',
-                    'quantity' => $item->quantity_received,
+                    'quantity' => $item->quantity_received ?? $item->quantity_ordered,
                     'unit_cost' => $item->unit_price,
                     'reference' => 'PUR-' . $purchase->id,
                     'reference_id' => $purchase->id,
@@ -180,11 +185,23 @@ class PurchaseService
     }
 
     /**
+     * Obtenir le warehouse par défaut (gros) pour un tenant
+     */
+    private function getDefaultWarehouse(int $tenant_id): int
+    {
+        $warehouse = \App\Models\Warehouse::where('tenant_id', $tenant_id)
+            ->where('type', 'gros')
+            ->first();
+        
+        return $warehouse?->id ?? 1;
+    }
+
+    /**
      * Mettre à jour le stock avec calcul du CMP (Coût Moyen Pondéré)
      */
-    private function updateStockWithCMP(int $tenant_id, int $product_id, int $quantity_received, float $unit_price): Stock
+    private function updateStockWithCMP(int $tenant_id, int $product_id, int $quantity_received, float $unit_price, int $warehouse_id = null): Stock
     {
-        $warehouse_id = 1; // Gros warehouse (default)
+        $warehouse_id = $warehouse_id ?? $this->getDefaultWarehouse($tenant_id);
         
         $stock = Stock::firstOrCreate(
             [

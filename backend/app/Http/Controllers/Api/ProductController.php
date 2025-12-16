@@ -34,11 +34,11 @@ class ProductController extends Controller
         $perPage = min($request->query('per_page', 50), 200);
         $page = $request->query('page', 1);
 
-        // Cache pour les requêtes sans recherche (les plus fréquentes)
+        // Cache pour les requêtes sans recherche (les plus fréquentes) - TTL 5 minutes
         $cacheKey = "products_{$tenant_id}_{$category}_{$status}_{$perPage}_{$page}";
         
         if (empty($search)) {
-            $products = Cache::remember($cacheKey, 60, function () use ($tenant_id, $category, $status, $perPage) {
+            $products = Cache::remember($cacheKey, 300, function () use ($tenant_id, $category, $status, $perPage) {
                 $query = Product::where('tenant_id', $tenant_id);
                 
                 if ($category) $query->where('category', $category);

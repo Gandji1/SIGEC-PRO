@@ -42,9 +42,17 @@ class PosOrderController extends Controller
     {
         $user = auth()->user();
         $tenantId = $user->tenant_id;
+        $limit = min($request->get('limit', 50), 200);
 
         $query = PosOrder::where('tenant_id', $tenantId)
-            ->with(['items.product', 'createdByUser', 'servedByUser', 'pos']);
+            ->select(['id', 'reference', 'pos_id', 'table_id', 'table_number', 'customer_id', 'status', 'preparation_status', 'payment_status', 'payment_method', 'subtotal', 'total', 'created_by', 'served_by', 'created_at', 'validated_at'])
+            ->with([
+                'items:id,pos_order_id,product_id,quantity_ordered,quantity_served,unit_price,line_total',
+                'items.product:id,name,code,unit',
+                'createdByUser:id,name',
+                'servedByUser:id,name',
+                'pos:id,name,code'
+            ]);
 
         // Filtres
         if ($request->has('status')) {
@@ -68,9 +76,7 @@ class PosOrderController extends Controller
             $query->where('created_by', $user->id);
         }
 
-        $orders = $query->orderBy('created_at', 'desc')
-            ->limit($request->get('limit', 50))
-            ->get();
+        $orders = $query->orderBy('created_at', 'desc')->limit($limit)->get();
 
         return response()->json(['data' => $orders]);
     }

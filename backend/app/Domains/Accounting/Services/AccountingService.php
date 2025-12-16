@@ -377,24 +377,47 @@ class AccountingService
 
     /**
      * Obtenir ou creer un compte comptable
+     * Note: La contrainte UNIQUE est sur 'code' seul, pas sur (tenant_id, code)
+     * On doit contourner le TenantScope pour chercher globalement
      */
     protected function getAccountId(int $tenantId, string $code, string $name): int
     {
-        $account = ChartOfAccounts::where('tenant_id', $tenantId)
+        // Requête SQL directe pour contourner le TenantScope
+        $existing = \DB::table('chart_of_accounts')
             ->where('code', $code)
+            ->whereNull('deleted_at')
             ->first();
-
-        if (!$account) {
-            $account = ChartOfAccounts::create([
-                'tenant_id' => $tenantId,
-                'code' => $code,
-                'name' => $name,
-                'account_type' => $this->getAccountType($code),
-                'is_active' => true,
-            ]);
+        
+        if ($existing) {
+            return $existing->id;
         }
 
-        return $account->id;
+        // Vérifier aussi les supprimés
+        $deleted = \DB::table('chart_of_accounts')
+            ->where('code', $code)
+            ->whereNotNull('deleted_at')
+            ->first();
+        
+        if ($deleted) {
+            // Restaurer le compte supprimé
+            \DB::table('chart_of_accounts')
+                ->where('id', $deleted->id)
+                ->update(['deleted_at' => null, 'updated_at' => now()]);
+            return $deleted->id;
+        }
+
+        // Créer seulement si n'existe vraiment pas
+        $id = \DB::table('chart_of_accounts')->insertGetId([
+            'tenant_id' => $tenantId,
+            'code' => $code,
+            'name' => $name,
+            'account_type' => $this->getAccountType($code),
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $id;
     }
 
     /**

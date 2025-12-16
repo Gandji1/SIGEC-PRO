@@ -13,23 +13,23 @@ import {
 } from 'lucide-react';
 import sigecLogo from '../assets/SIGEC.jpg';
 
-// Carte de statistique animée (compacte pour grille 2x2)
+// Carte de statistique animée - MOBILE OPTIMIZED
 const StatCard = memo(({ icon: Icon, label, value, trend, color, delay }) => (
   <div 
-    className={`relative overflow-hidden bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-300 animate-fade-in`}
+    className={`relative overflow-hidden bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-300 animate-fade-in`}
     style={{ animationDelay: `${delay}ms` }}
   >
-    <div className={`absolute top-0 right-0 w-16 h-16 ${color} opacity-10 rounded-full -translate-y-1/2 translate-x-1/2`} />
+    <div className={`absolute top-0 right-0 w-12 sm:w-16 h-12 sm:h-16 ${color} opacity-10 rounded-full -translate-y-1/2 translate-x-1/2`} />
     <div className="relative">
-      <div className="flex items-center gap-2 mb-1">
-        <div className={`w-7 h-7 ${color} bg-opacity-20 rounded-md flex items-center justify-center flex-shrink-0`}>
-          <Icon className={`${color.replace('bg-', 'text-')}`} size={14} />
+      <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+        <div className={`w-5 h-5 sm:w-7 sm:h-7 ${color} bg-opacity-20 rounded flex sm:rounded-md items-center justify-center flex-shrink-0`}>
+          <Icon className={`${color.replace('bg-', 'text-')}`} size={12} />
         </div>
-        <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">{label}</p>
+        <p className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 leading-tight truncate">{label}</p>
       </div>
-      <p className="text-base font-bold text-gray-900 dark:text-white truncate">{value}</p>
+      <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate">{value}</p>
       {trend && (
-        <div className="flex items-center gap-1 mt-0.5">
+        <div className="hidden sm:flex items-center gap-1 mt-0.5">
           <TrendingUp size={10} className="text-green-500" />
           <span className="text-[10px] text-green-500 font-medium">{trend}</span>
         </div>
@@ -38,25 +38,25 @@ const StatCard = memo(({ icon: Icon, label, value, trend, color, delay }) => (
   </div>
 ));
 
-// Bouton d'action rapide
+// Bouton d'action rapide - MOBILE OPTIMIZED
 const QuickActionButton = memo(({ icon: Icon, label, description, onClick, color, delay }) => (
   <button
     onClick={onClick}
-    className={`group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-md border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-left w-full animate-fade-in`}
+    className={`group relative overflow-hidden bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-md border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-left w-full animate-fade-in`}
     style={{ animationDelay: `${delay}ms` }}
   >
     <div className={`absolute inset-0 ${color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-    <div className="flex items-start gap-4">
-      <div className={`w-12 h-12 ${color} bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
-        <Icon className={`${color.replace('bg-', 'text-')}`} size={22} />
+    <div className="flex items-center sm:items-start gap-2 sm:gap-4">
+      <div className={`w-9 h-9 sm:w-12 sm:h-12 ${color} bg-opacity-20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+        <Icon className={`${color.replace('bg-', 'text-')}`} size={18} />
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+        <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors truncate">
           {label}
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{description}</p>
+        <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{description}</p>
       </div>
-      <ArrowRight size={20} className="text-gray-400 group-hover:text-brand-600 group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
+      <ArrowRight size={16} className="text-gray-400 group-hover:text-brand-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
     </div>
   </button>
 ));
@@ -267,27 +267,27 @@ export default function HomePage() {
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Hero Section - Image + Stats côte à côte */}
-        <div className="mb-8 animate-fade-in">
-          <div className="flex flex-col lg:flex-row gap-6 items-stretch">
+        <div className="mb-4 sm:mb-8 animate-fade-in">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-6 items-stretch">
             
-            {/* Image SIGEC - 20cm x 11cm (environ 756px x 416px) - réduit de 4cm */}
-            <div className="flex-shrink-0">
-              <div className="relative overflow-hidden rounded-3xl shadow-2xl" style={{ width: '756px', maxWidth: '100%', height: '416px' }}>
+            {/* Image SIGEC - Responsive: compact sur mobile, large sur desktop */}
+            <div className="flex-shrink-0 w-full lg:w-auto">
+              <div className="relative overflow-hidden rounded-lg sm:rounded-xl lg:rounded-3xl shadow-lg sm:shadow-2xl" style={{ maxWidth: '756px', height: 'auto' }}>
                 <img 
                   src={sigecLogo} 
                   alt="SIGEC - Système Intégré de Gestion Commerciale" 
-                  className="w-full h-full object-cover"
+                  className="w-full h-32 sm:h-48 lg:h-[320px] object-cover"
                 />
                 {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 
-                {/* Texte sur l'image */}
-                <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                  <h1 className="text-2xl md:text-3xl font-black mb-2">
-                    {getGreeting()}, {user?.name || 'Utilisateur'} 👋
+                {/* Texte sur l'image - compact sur mobile */}
+                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 text-white">
+                  <h1 className="text-base sm:text-2xl lg:text-3xl font-black mb-1 sm:mb-2 truncate">
+                    {getGreeting()}, {user?.name?.split(' ')[0] || 'Utilisateur'} 👋
                   </h1>
-                  <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm ${
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-sm ${
                       userRole === 'super_admin' ? 'bg-red-500/80 text-white' :
                       userRole === 'owner' || userRole === 'admin' ? 'bg-purple-500/80 text-white' :
                       userRole === 'manager' ? 'bg-orange-500/80 text-white' :
@@ -295,7 +295,7 @@ export default function HomePage() {
                     }`}>
                       {getRoleLabel(userRole)}
                     </span>
-                    <span className="text-white/80 text-sm">
+                    <span className="text-white/80 text-xs sm:text-sm truncate">
                       {tenant?.name || 'SIGEC'}
                     </span>
                   </div>
@@ -304,18 +304,18 @@ export default function HomePage() {
             </div>
 
             {/* Stats à droite de l'image - 2 par ligne */}
-            <div className="flex-1 flex flex-col gap-3 min-w-[320px] max-w-[400px]">
-              {/* Titre stats */}
-              <div className="bg-gradient-to-r from-brand-600 to-purple-600 rounded-xl p-3 text-white">
-                <h2 className="text-base font-bold flex items-center gap-2">
-                  <BarChart3 size={18} />
+            <div className="flex-1 flex flex-col gap-2 sm:gap-3 min-w-0 lg:min-w-[320px] lg:max-w-[400px]">
+              {/* Titre stats - compact sur mobile */}
+              <div className="bg-gradient-to-r from-brand-600 to-purple-600 rounded-lg sm:rounded-xl p-2 sm:p-3 text-white">
+                <h2 className="text-sm sm:text-base font-bold flex items-center gap-2">
+                  <BarChart3 size={16} />
                   Tableau de bord
                 </h2>
-                <p className="text-white/80 text-xs">Statistiques en temps réel</p>
+                <p className="text-white/80 text-[10px] sm:text-xs hidden sm:block">Statistiques en temps réel</p>
               </div>
 
               {/* Stats cards - grille 2x2 */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <StatCard
                   icon={Building2}
                   label="Entreprises actives"
@@ -360,12 +360,12 @@ export default function HomePage() {
         </div>
 
         {/* Quick Actions - Juste en dessous de l'image */}
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Sparkles className="text-brand-500" size={24} />
+        <div className="mb-4 sm:mb-8">
+          <h3 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-4 flex items-center gap-2">
+            <Sparkles className="text-brand-500" size={18} />
             Actions rapides
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
             {getQuickActions().map((action, idx) => (
               <QuickActionButton
                 key={idx}
@@ -380,34 +380,34 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Info Banner */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-700 to-purple-700 rounded-2xl p-6 shadow-xl animate-fade-in" style={{ animationDelay: '800ms' }}>
+        {/* Info Banner - compact sur mobile */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-700 to-purple-700 rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-xl animate-fade-in" style={{ animationDelay: '800ms' }}>
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-2xl" />
+            <div className="absolute -top-20 -right-20 w-32 sm:w-64 h-32 sm:h-64 bg-white/10 rounded-full blur-2xl" />
           </div>
           
-          <div className="relative flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="text-center md:text-left">
-              <h3 className="text-xl font-bold text-white mb-1">
+          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
+            <div className="text-center sm:text-left">
+              <h3 className="text-sm sm:text-xl font-bold text-white mb-0.5 sm:mb-1">
                 Bienvenue sur SIGEC
               </h3>
-              <p className="text-white/80 text-sm">
-                Votre système intégré de gestion commerciale - Ventes, stocks, comptabilité et équipes.
+              <p className="text-white/80 text-xs sm:text-sm hidden sm:block">
+                Votre système intégré de gestion commerciale
               </p>
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="px-5 py-2.5 bg-white text-brand-700 rounded-lg font-bold hover:bg-gray-100 transition-colors shadow-lg text-sm"
+                className="px-3 sm:px-5 py-1.5 sm:py-2.5 bg-white text-brand-700 rounded-lg font-bold hover:bg-gray-100 transition-colors shadow-lg text-xs sm:text-sm"
               >
                 Commencer
               </button>
               <button
                 onClick={() => window.open('https://docs.sigec.com', '_blank')}
-                className="px-5 py-2.5 bg-white/20 text-white rounded-lg font-bold hover:bg-white/30 transition-colors backdrop-blur-sm text-sm"
+                className="px-3 sm:px-5 py-1.5 sm:py-2.5 bg-white/20 text-white rounded-lg font-bold hover:bg-white/30 transition-colors backdrop-blur-sm text-xs sm:text-sm hidden sm:block"
               >
-                Documentation
+                Docs
               </button>
             </div>
           </div>

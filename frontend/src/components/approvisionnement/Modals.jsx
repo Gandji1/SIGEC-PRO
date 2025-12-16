@@ -1,15 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from './UIComponents';
 import { formatCurrency } from './utils';
 import apiClient from '../../services/apiClient';
 
-export function PurchaseModal({ headers, suppliers, products, warehouseId, onClose, onSaved }) {
+export function PurchaseModal({ headers, suppliers: initialSuppliers = [], products: initialProducts = [], warehouseId, onClose, onSaved }) {
   const [form, setForm] = useState({
     supplier_id: '',
     expected_date: '',
     items: [{ product_id: '', qty_ordered: 1, expected_unit_cost: 0 }],
   });
   const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState(initialProducts);
+  const [suppliers, setSuppliers] = useState(initialSuppliers);
+  const [dataLoading, setDataLoading] = useState(initialProducts.length === 0 || initialSuppliers.length === 0);
+  
+  // Charger les données si pas fournies
+  useEffect(() => {
+    if (products.length > 0 && suppliers.length > 0) {
+      setDataLoading(false);
+      return;
+    }
+    
+    const loadData = async () => {
+      try {
+        const [prodRes, suppRes] = await Promise.all([
+          products.length === 0 ? apiClient.get('/products?per_page=100') : Promise.resolve({ data: products }),
+          suppliers.length === 0 ? apiClient.get('/suppliers?per_page=100') : Promise.resolve({ data: suppliers }),
+        ]);
+        
+        const prods = prodRes.data?.data || prodRes.data || [];
+        const supps = suppRes.data?.data || suppRes.data || [];
+        
+        if (Array.isArray(prods) && prods.length > 0) setProducts(prods);
+        if (Array.isArray(supps) && supps.length > 0) setSuppliers(supps);
+        setDataLoading(false);
+      } catch (e) {
+        console.error('[PurchaseModal] Erreur chargement:', e);
+        setDataLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+  
+  // Afficher le chargement
+  if (dataLoading) {
+    return (
+      <Modal title="Nouvelle Commande d'Achat" onClose={onClose}>
+        <div className="text-center py-8">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement des données...</p>
+        </div>
+      </Modal>
+    );
+  }
+  
+  // Si pas de produits ou fournisseurs, afficher un message
+  if (products.length === 0 || suppliers.length === 0) {
+    return (
+      <Modal title="Nouvelle Commande d'Achat" onClose={onClose}>
+        <div className="text-center py-8">
+          <p className="text-red-600 font-medium">Données manquantes</p>
+          {products.length === 0 && (
+            <p className="text-sm text-gray-500 mt-2">Aucun produit disponible. Créez des produits dans le catalogue.</p>
+          )}
+          {suppliers.length === 0 && (
+            <p className="text-sm text-gray-500 mt-2">Aucun fournisseur disponible. Le propriétaire doit créer des fournisseurs.</p>
+          )}
+          <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Fermer</button>
+        </div>
+      </Modal>
+    );
+  }
 
   const addItem = () => setForm({
     ...form,
@@ -21,7 +83,12 @@ export function PurchaseModal({ headers, suppliers, products, warehouseId, onClo
     if (field === 'product_id') {
       items[i].product_id = value;
       const p = products.find(x => x.id == value);
-      if (p) items[i].expected_unit_cost = p.purchase_price || p.cost_price || 0;
+      if (p) {
+        // Récupérer le prix d'achat ou le prix de vente comme fallback
+        const price = p.purchase_price || p.cost_price || p.price || p.sale_price || 0;
+        items[i].expected_unit_cost = parseFloat(price) || 0;
+        console.log('[PurchaseModal] Produit sélectionné:', p.name, 'Prix:', items[i].expected_unit_cost);
+      }
     } else if (field === 'qty_ordered') {
       items[i].qty_ordered = parseInt(value) || 1;
     } else {
@@ -45,21 +112,41 @@ export function PurchaseModal({ headers, suppliers, products, warehouseId, onClo
     setLoading(true);
     try {
       const supplier = suppliers.find(s => s.id == form.supplier_id);
+      
+      // Préparer les items avec validation des prix
+      const validItems = form.items.filter(i => i.product_id).map(i => {
+        const product = products.find(p => p.id == i.product_id);
+        let price = parseFloat(i.expected_unit_cost) || 0;
+        
+        // Si prix = 0, récupérer depuis le produit
+        if (price <= 0 && product) {
+          price = parseFloat(product.purchase_price || product.cost_price || product.price || product.sale_price || 0);
+        }
+        
+        return {
+          product_id: parseInt(i.product_id),
+          qty_ordered: parseInt(i.qty_ordered) || 1,
+          expected_unit_cost: price,
+        };
+      });
+      
+      // Vérifier qu'au moins un item a un prix > 0
+      const totalValue = validItems.reduce((sum, i) => sum + (i.qty_ordered * i.expected_unit_cost), 0);
+      if (totalValue <= 0) {
+        alert('⚠️ Attention: Le total de la commande est de 0 FCFA. Vérifiez les prix des produits.');
+      }
+      
       const payload = {
         supplier_id: parseInt(form.supplier_id),
         supplier_name: supplier?.name,
         warehouse_id: warehouseId,
         expected_date: form.expected_date || null,
-        items: form.items.filter(i => i.product_id).map(i => ({
-          product_id: parseInt(i.product_id),
-          qty_ordered: parseInt(i.qty_ordered) || 1,
-          expected_unit_cost: parseFloat(i.expected_unit_cost) || 0,
-        })),
+        items: validItems,
       };
       
-      console.log('[PurchaseModal] Creating purchase:', payload);
+      console.log('[PurchaseModal] Creating purchase:', payload, 'Total:', totalValue);
       await apiClient.post('/approvisionnement/purchases', payload);
-      alert('✅ Commande créée avec succès');
+      alert('✅ Commande créée et envoyée au fournisseur!');
       onSaved();
     } catch (err) {
       console.error('[PurchaseModal] Erreur création commande:', err);
@@ -182,16 +269,32 @@ export function PurchaseModal({ headers, suppliers, products, warehouseId, onClo
 }
 
 export function ReceiveModal({ headers, purchase, onClose, onSaved }) {
-  const [items, setItems] = useState(
-    (purchase.items || []).map(i => ({
-      purchase_item_id: i.id,
-      product_name: i.product?.name || 'Produit',
-      qty_ordered: i.quantity_ordered,
-      qty_received: i.quantity_ordered - (i.quantity_received || 0),
-      unit_cost: i.unit_price || 0,
-    }))
-  );
-  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les items de la commande via API
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        const res = await apiClient.get(`/approvisionnement/purchases/${purchase.id}`);
+        const data = res.data;
+        const purchaseItems = (data.items || []).map(i => ({
+          purchase_item_id: i.id,
+          product_name: i.product?.name || 'Produit',
+          qty_ordered: i.quantity_ordered,
+          qty_received: i.quantity_ordered - (i.quantity_received || 0),
+          unit_cost: i.unit_price || 0,
+        }));
+        setItems(purchaseItems);
+      } catch (err) {
+        console.error('[ReceiveModal] Erreur chargement items:', err);
+        alert('❌ Erreur chargement des items');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadItems();
+  }, [purchase.id]);
 
   const updateItem = (i, field, value) => {
     const newItems = [...items];
@@ -201,23 +304,61 @@ export function ReceiveModal({ headers, purchase, onClose, onSaved }) {
 
   const submit = async (e) => {
     e.preventDefault();
+    
+    // Filtrer les items avec quantité > 0
+    const validItems = items.filter(i => i.qty_received > 0 && i.purchase_item_id);
+    
+    if (validItems.length === 0) {
+      alert('⚠️ Veuillez saisir au moins une quantité à réceptionner');
+      return;
+    }
+    
+    // Préparer le payload
+    const payload = {
+      received_items: validItems.map(i => ({
+        purchase_item_id: parseInt(i.purchase_item_id),
+        qty_received: parseInt(i.qty_received),
+        unit_cost: parseFloat(i.unit_cost) || 0,
+      }))
+    };
+    
+    console.log('[ReceiveModal] Envoi réception:', payload);
+    
     setLoading(true);
     try {
-      await apiClient.post(`/approvisionnement/purchases/${purchase.id}/receive`, {
-        received_items: items.filter(i => i.qty_received > 0),
-      });
+      await apiClient.post(`/approvisionnement/purchases/${purchase.id}/receive`, payload);
       alert('✅ Réception enregistrée - Stock et CMP mis à jour');
       onSaved();
     } catch (err) {
       console.error('[ReceiveModal] Erreur:', err);
-      alert('❌ Erreur: ' + (err.response?.data?.error || err.response?.data?.message || err.message));
+      console.error('[ReceiveModal] Response:', err.response?.data);
+      let errorMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+      
+      // Afficher les détails de validation si disponibles
+      if (err.response?.data?.details) {
+        const details = Object.values(err.response.data.details).flat().join(', ');
+        errorMsg += ' - ' + details;
+      }
+      
+      alert('❌ Erreur: ' + errorMsg);
     }
     setLoading(false);
   };
 
+  if (loading && items.length === 0) {
+    return (
+      <Modal title={`Réception - ${purchase.reference}`} onClose={onClose} wide>
+        <div className="text-center py-8">Chargement des articles...</div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal title={`Réception - ${purchase.reference}`} onClose={onClose} wide>
       <form onSubmit={submit}>
+        {items.length === 0 ? (
+          <div className="text-center py-8 text-red-500">Aucun article trouvé pour cette commande</div>
+        ) : (
         <table className="w-full border rounded-lg overflow-hidden mb-4">
           <thead className="bg-gray-50">
             <tr>
@@ -255,11 +396,12 @@ export function ReceiveModal({ headers, purchase, onClose, onSaved }) {
             ))}
           </tbody>
         </table>
+        )}
         <div className="flex justify-end gap-3">
           <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
             Annuler
           </button>
-          <button type="submit" disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50">
+          <button type="submit" disabled={loading || items.length === 0} className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50">
             {loading ? 'Validation...' : '✓ Valider Réception'}
           </button>
         </div>
@@ -268,13 +410,61 @@ export function ReceiveModal({ headers, purchase, onClose, onSaved }) {
   );
 }
 
-export function RequestModal({ headers, products, fromWarehouseId, toWarehouseId, onClose, onSaved }) {
+export function RequestModal({ headers, products: initialProducts = [], fromWarehouseId, toWarehouseId, onClose, onSaved }) {
   const [form, setForm] = useState({
     priority: 'normal',
     needed_by_date: '',
     items: [{ product_id: '', qty_requested: 1 }],
   });
   const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState(initialProducts);
+  const [dataLoading, setDataLoading] = useState(initialProducts.length === 0);
+  
+  // Charger les produits si pas fournis
+  useEffect(() => {
+    if (products.length > 0) {
+      setDataLoading(false);
+      return;
+    }
+    
+    const loadData = async () => {
+      try {
+        const res = await apiClient.get('/products?per_page=100');
+        const prods = res.data?.data || res.data || [];
+        if (Array.isArray(prods) && prods.length > 0) setProducts(prods);
+        setDataLoading(false);
+      } catch (e) {
+        console.error('[RequestModal] Erreur chargement:', e);
+        setDataLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+  
+  // Afficher le chargement
+  if (dataLoading) {
+    return (
+      <Modal title="Nouvelle Demande de Stock" onClose={onClose}>
+        <div className="text-center py-8">
+          <div className="animate-spin w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement des produits...</p>
+        </div>
+      </Modal>
+    );
+  }
+  
+  // Si toujours pas de produits après chargement
+  if (products.length === 0) {
+    return (
+      <Modal title="Nouvelle Demande de Stock" onClose={onClose}>
+        <div className="text-center py-8">
+          <p className="text-red-600 font-medium">Impossible de charger les produits</p>
+          <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-200 rounded-lg">Fermer</button>
+        </div>
+      </Modal>
+    );
+  }
 
   const addItem = () => setForm({
     ...form,

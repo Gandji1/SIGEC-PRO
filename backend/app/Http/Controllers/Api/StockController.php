@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Stock;
 use App\Domains\Stocks\Services\StockService;
+use App\Traits\ResolveTenantId;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class StockController extends Controller
 {
+    use ResolveTenantId;
     protected StockService $stockService;
 
     public function __construct(StockService $stockService)
@@ -20,8 +22,7 @@ class StockController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $user = auth()->guard('sanctum')->user();
-        $tenantId = $request->header('X-Tenant-ID') ?? $user?->tenant_id;
+        $tenantId = $this->resolveTenantId($request);
         
         if (!$tenantId) {
             return response()->json(['error' => 'Tenant non trouvé', 'data' => []], 400);
@@ -76,10 +77,15 @@ class StockController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
+
         try {
             if ($validated['quantity_change'] > 0) {
                 $this->stockService->addStock(
-                    $request->header('X-Tenant-ID'),
+                    $tenantId,
                     $validated['product_id'],
                     $validated['quantity_change'],
                     0,
@@ -89,7 +95,7 @@ class StockController extends Controller
                 );
             } else {
                 $this->stockService->removeStock(
-                    $request->header('X-Tenant-ID'),
+                    $tenantId,
                     $validated['product_id'],
                     abs($validated['quantity_change']),
                     $validated['warehouse'],
@@ -98,7 +104,7 @@ class StockController extends Controller
                 );
             }
 
-            $stock = Stock::where('tenant_id', $request->header('X-Tenant-ID'))
+            $stock = Stock::where('tenant_id', $tenantId)
                 ->where('product_id', $validated['product_id'])
                 ->where('warehouse', $validated['warehouse'])
                 ->first();
@@ -121,16 +127,21 @@ class StockController extends Controller
             'reference' => 'required|string|max:255',
         ]);
 
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
+
         try {
             $this->stockService->reserveStock(
-                $request->header('X-Tenant-ID'),
+                $tenantId,
                 $validated['product_id'],
                 $validated['quantity'],
                 $validated['warehouse'],
                 $validated['reference']
             );
 
-            $stock = Stock::where('tenant_id', $request->header('X-Tenant-ID'))
+            $stock = Stock::where('tenant_id', $tenantId)
                 ->where('product_id', $validated['product_id'])
                 ->where('warehouse', $validated['warehouse'])
                 ->first();
@@ -150,16 +161,21 @@ class StockController extends Controller
             'reference' => 'required|string|max:255',
         ]);
 
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
+
         try {
             $this->stockService->releaseStock(
-                $request->header('X-Tenant-ID'),
+                $tenantId,
                 $validated['product_id'],
                 $validated['quantity'],
                 $validated['warehouse'],
                 $validated['reference']
             );
 
-            $stock = Stock::where('tenant_id', $request->header('X-Tenant-ID'))
+            $stock = Stock::where('tenant_id', $tenantId)
                 ->where('product_id', $validated['product_id'])
                 ->where('warehouse', $validated['warehouse'])
                 ->first();
@@ -179,16 +195,21 @@ class StockController extends Controller
             'quantity' => 'required|numeric|min:1',
         ]);
 
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
+
         try {
             $this->stockService->transferStock(
-                $request->header('X-Tenant-ID'),
+                $tenantId,
                 $validated['product_id'],
                 $validated['quantity'],
                 $validated['from_warehouse'],
                 $validated['to_warehouse']
             );
 
-            $stock = Stock::where('tenant_id', $request->header('X-Tenant-ID'))
+            $stock = Stock::where('tenant_id', $tenantId)
                 ->where('product_id', $validated['product_id'])
                 ->where('warehouse', $validated['to_warehouse'])
                 ->first();
@@ -201,7 +222,10 @@ class StockController extends Controller
 
     public function lowStock(Request $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->guard('sanctum')->user()?->tenant_id;
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         $warehouse = $request->query('warehouse');
         
         $query = Stock::where('tenant_id', $tenantId)
@@ -251,7 +275,10 @@ class StockController extends Controller
      */
     public function alerts(Request $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->guard('sanctum')->user()?->tenant_id;
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         $warehouse = $request->query('warehouse', 'Magasin de détail');
         
         // Produits en rupture de stock
@@ -301,7 +328,10 @@ class StockController extends Controller
      */
     public function suggestedOrders(Request $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->guard('sanctum')->user()?->tenant_id;
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         $warehouse = $request->query('warehouse');
         
         $query = Stock::where('tenant_id', $tenantId)
@@ -357,7 +387,10 @@ class StockController extends Controller
 
     public function summary(Request $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->guard('sanctum')->user()?->tenant_id;
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         
         // Cache de 60 secondes pour le summary
         $cacheKey = "stock_summary_{$tenantId}";

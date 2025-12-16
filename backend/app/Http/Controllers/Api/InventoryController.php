@@ -378,7 +378,7 @@ class InventoryController extends Controller
                         $q->where('tenant_id', $tenantId)
                           ->where('warehouse_id', $warehouseId)
                           ->where('status', 'received')
-                          ->where('received_at', '>=', $periodStart);
+                          ->where('received_date', '>=', $periodStart);
                     })
                     ->selectRaw('product_id, SUM(COALESCE(quantity_received, quantity_ordered, 0)) as total')
                     ->groupBy('product_id')

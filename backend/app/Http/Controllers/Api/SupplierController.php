@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SupplierController extends Controller
 {
@@ -19,32 +20,56 @@ class SupplierController extends Controller
         }
         
         $perPage = min($request->query('per_page', 50), 200);
-        $query = Supplier::where('tenant_id', $tenantId);
-
-        if ($request->has('search')) {
-            $search = $request->query('search');
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%")
-                  ->orWhere('phone', 'like', "%$search%");
+        $search = $request->query('search', '');
+        $status = $request->query('status', '');
+        $page = $request->query('page', 1);
+        
+        // Cache pour les requêtes sans recherche
+        $cacheKey = "suppliers_{$tenantId}_{$status}_{$perPage}_{$page}";
+        
+        if (empty($search)) {
+            $suppliers = Cache::remember($cacheKey, 300, function () use ($tenantId, $status, $perPage) {
+                $query = Supplier::where('tenant_id', $tenantId)
+                    ->select(['id', 'name', 'email', 'phone', 'contact_person', 'status', 'created_at']);
+                
+                if ($status) {
+                    $query->where('status', $status);
+                }
+                
+                return $query->orderBy('name')->paginate($perPage);
             });
+        } else {
+            $query = Supplier::where('tenant_id', $tenantId)
+                ->select(['id', 'name', 'email', 'phone', 'contact_person', 'status', 'created_at']);
+            
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'ilike', "%$search%")
+                  ->orWhere('email', 'ilike', "%$search%")
+                  ->orWhere('phone', 'ilike', "%$search%");
+            });
+            
+            if ($status) {
+                $query->where('status', $status);
+            }
+            
+            $suppliers = $query->orderBy('name')->paginate($perPage);
         }
-
-        if ($request->has('status')) {
-            $query->where('status', $request->query('status'));
-        }
-
-        $suppliers = $query->orderBy('name')
-            ->paginate($perPage);
 
         return response()->json($suppliers);
     }
 
     public function store(Request $request): JsonResponse
     {
+        $user = auth()->guard('sanctum')->user();
+        $tenantId = $request->header('X-Tenant-ID') ?? $user?->tenant_id;
+        
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:suppliers,email,NULL,id,tenant_id,'.$request->header('X-Tenant-ID'),
+            'email' => 'nullable|email|unique:suppliers,email,NULL,id,tenant_id,'.$tenantId,
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:255',
@@ -57,9 +82,13 @@ class SupplierController extends Controller
         ]);
 
         $supplier = Supplier::create([
-            'tenant_id' => $request->header('X-Tenant-ID'),
+            'tenant_id' => $tenantId,
             ...$validated,
+            'status' => 'active',
         ]);
+        
+        // Invalider le cache des fournisseurs
+        Cache::forget("suppliers_{$tenantId}__50_1");
 
         return response()->json($supplier, 201);
     }
@@ -76,10 +105,13 @@ class SupplierController extends Controller
     public function update(Request $request, Supplier $supplier): JsonResponse
     {
         $this->authorize('update', $supplier);
+        
+        $user = auth()->guard('sanctum')->user();
+        $tenantId = $request->header('X-Tenant-ID') ?? $user?->tenant_id;
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:suppliers,email,'.$supplier->id.',id,tenant_id,'.$request->header('X-Tenant-ID'),
+            'email' => 'sometimes|email|unique:suppliers,email,'.$supplier->id.',id,tenant_id,'.$tenantId,
             'phone' => 'sometimes|string|max:20',
             'address' => 'sometimes|string',
             'city' => 'sometimes|string|max:255',
@@ -89,9 +121,13 @@ class SupplierController extends Controller
             'contact_person' => 'sometimes|string|max:255',
             'bank_details' => 'sometimes|array',
             'notes' => 'sometimes|string',
+            'status' => 'sometimes|string|in:active,inactive',
         ]);
 
         $supplier->update($validated);
+        
+        // Invalider le cache
+        Cache::forget("suppliers_{$tenantId}__50_1");
 
         return response()->json($supplier);
     }
@@ -106,8 +142,12 @@ class SupplierController extends Controller
                 422
             );
         }
-
+        
+        $tenantId = $supplier->tenant_id;
         $supplier->delete();
+        
+        // Invalider le cache
+        Cache::forget("suppliers_{$tenantId}__50_1");
 
         return response()->json(['message' => 'Supplier deleted']);
     }

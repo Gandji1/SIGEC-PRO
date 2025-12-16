@@ -24,21 +24,45 @@ class PurchaseController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID');
-        $purchases = Purchase::where('tenant_id', $tenantId)
-            ->with(['user', 'items', 'items.product'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $tenantId = $request->header('X-Tenant-ID') ?? auth()->guard('sanctum')->user()?->tenant_id;
+        $perPage = min($request->query('per_page', 20), 100);
+        $status = $request->query('status');
+        
+        $query = Purchase::where('tenant_id', $tenantId)
+            ->select(['id', 'reference', 'supplier_name', 'total', 'status', 'user_id', 'created_at', 'expected_date'])
+            ->with([
+                'user:id,name',
+                'items:id,purchase_id,product_id,quantity,unit_price,line_total',
+                'items.product:id,name,code'
+            ]);
+        
+        if ($status) {
+            $query->where('status', $status);
+        }
+        
+        $purchases = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json($purchases);
     }
 
     public function store(Request $request): JsonResponse
     {
+        $user = auth()->user();
+        
+        // RÈGLE MÉTIER: Seul le gérant (manager) peut créer des commandes
+        // Le tenant/owner ne passe PAS de commandes, il les autorise uniquement
+        if (!in_array($user->role, ['manager', 'gerant', 'super_admin'])) {
+            return response()->json([
+                'error' => 'Seul le gérant peut créer des commandes d\'achat. Le propriétaire autorise uniquement.'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'supplier_name' => 'required|string|max:255',
+            'supplier_id' => 'nullable|exists:suppliers,id',
             'supplier_email' => 'nullable|email',
             'supplier_phone' => 'nullable|string',
+            'warehouse_id' => 'nullable|exists:warehouses,id',
             'expected_date' => 'nullable|date',
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -51,6 +75,12 @@ class PurchaseController extends Controller
             DB::beginTransaction();
 
             $purchase = $this->purchaseService->createPurchase($validated);
+            
+            // Enregistrer qui a créé la commande
+            $purchase->update([
+                'created_by_user_id' => $user->id,
+                'status' => Purchase::STATUS_DRAFT,
+            ]);
 
             foreach ($validated['items'] as $item) {
                 $this->purchaseService->addItem(
@@ -170,15 +200,15 @@ class PurchaseController extends Controller
     }
 
     /**
-     * Gérant soumet la commande pour approbation par le Tenant
+     * Gérant soumet la commande directement au fournisseur (lien direct gérant→fournisseur)
      */
     public function submitForApproval(Request $request, Purchase $purchase): JsonResponse
     {
         $user = auth()->user();
         
-        // Seul le gérant peut soumettre
-        if (!in_array($user->role, ['manager', 'super_admin'])) {
-            return response()->json(['error' => 'Seul le gérant peut soumettre une commande'], 403);
+        // RÈGLE MÉTIER: Seul le gérant peut soumettre au fournisseur
+        if (!in_array($user->role, ['manager', 'gerant', 'super_admin'])) {
+            return response()->json(['error' => 'Seul le gérant peut soumettre une commande au fournisseur'], 403);
         }
 
         if ($purchase->status !== 'draft' && $purchase->status !== 'pending') {
@@ -188,13 +218,18 @@ class PurchaseController extends Controller
             );
         }
 
+        // Lien direct: gérant → fournisseur (skip tenant approval)
         $purchase->update([
-            'status' => 'pending_approval',
+            'status' => Purchase::STATUS_SUBMITTED,
             'created_by_user_id' => $user->id,
+            'submitted_at' => now(),
         ]);
 
+        // Notifier le fournisseur
+        $this->notificationService->notifySupplierNewOrder($purchase->fresh()->load(['supplier', 'tenant', 'items']));
+
         return response()->json([
-            'message' => 'Commande soumise pour approbation par le propriétaire',
+            'message' => 'Commande envoyée au fournisseur',
             'data' => $purchase->fresh()->load(['items', 'items.product'])
         ], 200);
     }
@@ -297,10 +332,17 @@ class PurchaseController extends Controller
 
     public function receive(Request $request, Purchase $purchase): JsonResponse
     {
+        $user = auth()->user();
+        
+        // RÈGLE MÉTIER: Seul le gérant peut réceptionner les commandes
+        if (!in_array($user->role, ['manager', 'gerant', 'super_admin'])) {
+            return response()->json(['error' => 'Seul le gérant peut réceptionner les commandes'], 403);
+        }
+
         $this->authorize('update', $purchase);
 
         // Seules les commandes livrées peuvent être réceptionnées
-        if ($purchase->status !== 'delivered') {
+        if ($purchase->status !== Purchase::STATUS_DELIVERED) {
             return response()->json(
                 ['error' => 'Seules les commandes livrées peuvent être réceptionnées. Statut actuel: ' . $purchase->status],
                 422

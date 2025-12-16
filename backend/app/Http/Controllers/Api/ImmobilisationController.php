@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\AmortissementService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,12 @@ use Illuminate\Support\Facades\DB;
  */
 class ImmobilisationController extends Controller
 {
+    protected AmortissementService $amortissementService;
+
+    public function __construct(AmortissementService $amortissementService)
+    {
+        $this->amortissementService = $amortissementService;
+    }
     /**
      * Liste des immobilisations
      */
@@ -165,43 +172,34 @@ class ImmobilisationController extends Controller
     }
 
     /**
-     * Calculer et enregistrer les amortissements
+     * Calculer les dotations aux amortissements (preview)
      */
     public function calculateAmortissement(Request $request): JsonResponse
     {
         $tenantId = auth()->user()->tenant_id;
         $year = $request->input('year', date('Y'));
         
-        $immobilisations = DB::table('immobilisations')
-            ->where('tenant_id', $tenantId)
-            ->where('status', 'active')
-            ->get();
-        
-        $totalAmortissement = 0;
-        
-        foreach ($immobilisations as $immo) {
-            $base = $immo->valeur_acquisition - $immo->valeur_residuelle;
-            $annuite = $base / $immo->duree_vie;
-            
-            // Vérifier si pas déjà totalement amorti
-            if ($immo->cumul_amortissement < $base) {
-                $newCumul = min($immo->cumul_amortissement + $annuite, $base);
-                
-                DB::table('immobilisations')
-                    ->where('id', $immo->id)
-                    ->update([
-                        'cumul_amortissement' => $newCumul,
-                        'updated_at' => now(),
-                    ]);
-                
-                $totalAmortissement += $annuite;
-            }
-        }
+        $result = $this->amortissementService->calculerDotationsPeriode($tenantId, (int) $year);
         
         return response()->json([
-            'message' => 'Amortissements calculés',
-            'total_amortissement' => $totalAmortissement,
-            'year' => $year,
+            'message' => 'Dotations calculées (preview)',
+            'data' => $result,
+        ]);
+    }
+
+    /**
+     * Enregistrer les amortissements de l'année
+     */
+    public function enregistrerAmortissements(Request $request): JsonResponse
+    {
+        $tenantId = auth()->user()->tenant_id;
+        $year = $request->input('year', date('Y'));
+        
+        $result = $this->amortissementService->enregistrerAmortissements($tenantId, (int) $year);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $result,
         ]);
     }
 
@@ -221,27 +219,77 @@ class ImmobilisationController extends Controller
             return response()->json(['message' => 'Immobilisation non trouvée'], 404);
         }
         
-        $tableau = [];
-        $base = $immo->valeur_acquisition - $immo->valeur_residuelle;
-        $annuite = $base / $immo->duree_vie;
-        $cumul = 0;
-        $startYear = date('Y', strtotime($immo->date_acquisition));
-        
-        for ($i = 0; $i < $immo->duree_vie; $i++) {
-            $cumul += $annuite;
-            $tableau[] = [
-                'annee' => $startYear + $i,
-                'base_amortissable' => $base,
-                'annuite' => round($annuite, 2),
-                'cumul_amortissement' => round($cumul, 2),
-                'vnc' => round($immo->valeur_acquisition - $cumul, 2),
-            ];
-        }
+        $tableau = $this->amortissementService->genererTableau($immo);
         
         return response()->json([
             'data' => [
                 'immobilisation' => $immo,
                 'tableau' => $tableau,
+            ]
+        ]);
+    }
+
+    /**
+     * Historique des amortissements
+     */
+    public function historiqueAmortissements(Request $request): JsonResponse
+    {
+        $tenantId = auth()->user()->tenant_id;
+        $year = $request->input('year');
+        
+        $query = DB::table('amortissement_history as ah')
+            ->join('immobilisations as i', 'ah.immobilisation_id', '=', 'i.id')
+            ->where('ah.tenant_id', $tenantId)
+            ->select('ah.*', 'i.designation', 'i.category_code');
+        
+        if ($year) {
+            $query->where('ah.annee', $year);
+        }
+        
+        $historique = $query->orderBy('ah.annee', 'desc')
+            ->orderBy('ah.created_at', 'desc')
+            ->get();
+        
+        return response()->json(['data' => $historique]);
+    }
+
+    /**
+     * Résumé des immobilisations et amortissements
+     */
+    public function summary(): JsonResponse
+    {
+        $tenantId = auth()->user()->tenant_id;
+        
+        $stats = DB::table('immobilisations')
+            ->where('tenant_id', $tenantId)
+            ->selectRaw('
+                COUNT(*) as total_immobilisations,
+                SUM(valeur_acquisition) as valeur_brute_totale,
+                SUM(cumul_amortissement) as amortissements_cumules,
+                SUM(valeur_acquisition - cumul_amortissement) as vnc_totale,
+                SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as actives,
+                SUM(CASE WHEN status = "fully_depreciated" THEN 1 ELSE 0 END) as totalement_amorties
+            ')
+            ->first();
+        
+        // Par catégorie
+        $parCategorie = DB::table('immobilisations')
+            ->where('tenant_id', $tenantId)
+            ->groupBy('category_code', 'category_label')
+            ->selectRaw('
+                category_code,
+                category_label,
+                COUNT(*) as nombre,
+                SUM(valeur_acquisition) as valeur_brute,
+                SUM(cumul_amortissement) as amortissements,
+                SUM(valeur_acquisition - cumul_amortissement) as vnc
+            ')
+            ->get();
+        
+        return response()->json([
+            'data' => [
+                'summary' => $stats,
+                'par_categorie' => $parCategorie,
             ]
         ]);
     }

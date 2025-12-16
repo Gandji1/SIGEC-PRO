@@ -36,7 +36,7 @@ class Warehouse extends Model
 
     public function pos(): BelongsTo
     {
-        return $this->belongsTo(Pos::class)->nullable();
+        return $this->belongsTo(Pos::class);
     }
 
     public function stocks(): HasMany

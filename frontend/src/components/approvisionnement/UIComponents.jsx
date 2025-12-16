@@ -106,13 +106,13 @@ export const StatusBadge = ({ status }) => {
   const labels = {
     draft: 'Brouillon',
     pending_approval: 'Attente Approbation',
-    submitted: 'Envoyé',
+    submitted: 'Chez Fournisseur',
     ordered: 'Commandé',
-    confirmed: 'Confirmé',
-    shipped: 'Préparé',
-    delivered: 'Livré',
+    confirmed: 'Approuvé Fournisseur',
+    shipped: 'En Préparation',
+    delivered: '⏳ Attente Réception',
     partial: 'Partiel',
-    received: 'Réceptionné',
+    received: '✓ Réceptionné',
     pending: 'En attente',
     requested: 'Demandé',
     approved: 'Approuvé',
@@ -123,7 +123,7 @@ export const StatusBadge = ({ status }) => {
     active: 'Actif',
     preparing: 'En préparation',
     served: 'Servi',
-    paid: 'Payé',
+    paid: '✓ Payé',
   };
   return (
     <span className={`px-2 py-1 rounded-full text-xs font-medium ${cfg[status] || 'bg-gray-100'}`}>

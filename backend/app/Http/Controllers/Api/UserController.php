@@ -4,20 +4,28 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\User;
 use App\Models\Role;
+use App\Traits\ResolveTenantId;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
+    use ResolveTenantId;
     public function index(Request $request)
     {
-        $tenantId = $request->header('X-Tenant-ID');
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         $users = User::where('tenant_id', $tenantId)->with('roles')->get();
         return response()->json(['success' => true, 'data' => $users]);
     }
 
     public function store(Request $request)
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? auth()->user()->tenant_id;
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         
         $validated = $request->validate([
             'name' => 'required|string',
@@ -129,7 +137,10 @@ class UserController extends Controller
             'role_slug' => 'required|string',
         ]);
 
-        $tenantId = $request->header('X-Tenant-ID');
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         $role = Role::where('slug', $validated['role_slug'])->first();
 
         if (!$role) {
@@ -175,7 +186,10 @@ class UserController extends Controller
      */
     public function getByPos(Request $request, $posId)
     {
-        $tenantId = $request->header('X-Tenant-ID');
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         
         $users = User::where('tenant_id', $tenantId)
             ->where('assigned_pos_id', $posId)
@@ -190,7 +204,10 @@ class UserController extends Controller
      */
     public function getAssignable(Request $request)
     {
-        $tenantId = $request->header('X-Tenant-ID');
+        $tenantId = $this->resolveTenantId($request);
+        if (!$tenantId) {
+            return response()->json(['error' => 'Tenant non trouvé'], 400);
+        }
         
         $users = User::where('tenant_id', $tenantId)
             ->whereIn('role', ['pos_server', 'caissier', 'magasinier_gros', 'magasinier_detail'])

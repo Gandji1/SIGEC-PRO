@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'module' => \App\Http\Middleware\CheckTenantModule::class,
             'plan_limit' => \App\Http\Middleware\CheckPlanLimits::class,
             'tenant' => \App\Http\Middleware\TenantResolver::class,
+            'throttle.auth' => \App\Http\Middleware\RateLimitAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

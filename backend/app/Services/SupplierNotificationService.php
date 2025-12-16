@@ -243,6 +243,30 @@ class SupplierNotificationService
     }
 
     /**
+     * Notifier le tenant que le fournisseur a validé le paiement
+     */
+    public function notifyTenantPaymentValidated(Purchase $purchase): void
+    {
+        $supplier = $purchase->supplier;
+        $directLink = $this->generateTenantOrderLink($purchase);
+
+        $this->notifyTenantManagers(
+            $purchase->tenant_id,
+            'purchase_payment_validated',
+            'Paiement validé par le fournisseur',
+            "Le fournisseur {$supplier->name} a confirmé la réception du paiement pour la commande #{$purchase->reference}",
+            [
+                'purchase_id' => $purchase->id,
+                'reference' => $purchase->reference,
+                'supplier_name' => $supplier->name,
+                'amount' => $purchase->amount_paid,
+                'link' => $directLink,
+            ],
+            'normal'
+        );
+    }
+
+    /**
      * Notifier le fournisseur que le paiement a été effectué
      */
     public function notifySupplierPaymentMade(Purchase $purchase, float $amount): void

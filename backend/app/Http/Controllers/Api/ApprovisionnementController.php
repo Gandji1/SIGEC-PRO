@@ -75,18 +75,24 @@ class ApprovisionnementController extends Controller
     {
         $tenantId = auth()->guard('sanctum')->user()->tenant_id;
         $perPage = min($request->query('per_page', 50), 100);
-
+        $status = $request->query('status', '');
+        $warehouseId = $request->query('warehouse_id', '');
+        $page = $request->query('page', 1);
+        
+        // Cache pour les listes fréquentes
+        $cacheKey = "purchases_{$tenantId}_{$status}_{$warehouseId}_{$perPage}_{$page}";
+        
+        // Ne pas utiliser de cache pour avoir les items à jour
         $query = Purchase::where('tenant_id', $tenantId)
-            ->select(['id', 'reference', 'supplier_name', 'status', 'total', 'created_at', 'warehouse_id'])
-            ->with(['items:id,purchase_id,product_id,quantity_ordered,unit_price', 'items.product:id,name,code']);
+            ->with(['items.product', 'supplier']);
 
-        if ($request->has('status')) {
-            $statuses = explode(',', $request->query('status'));
+        if ($status) {
+            $statuses = explode(',', $status);
             $query->whereIn('status', $statuses);
         }
 
-        if ($request->has('warehouse_id')) {
-            $query->where('warehouse_id', $request->query('warehouse_id'));
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
 
         if ($request->has('from') && $request->has('to')) {
@@ -144,18 +150,30 @@ class ApprovisionnementController extends Controller
     {
         $this->authorize('update', $purchase);
 
-        $validated = $request->validate([
-            'received_items' => 'required|array|min:1',
-            'received_items.*.purchase_item_id' => 'required|exists:purchase_items,id',
-            'received_items.*.qty_received' => 'required|integer|min:1',
-            'received_items.*.unit_cost' => 'nullable|numeric|min:0',
-            'received_items.*.sale_price' => 'nullable|numeric|min:0',
-        ]);
+        try {
+            $validated = $request->validate([
+                'received_items' => 'required|array|min:1',
+                'received_items.*.purchase_item_id' => 'required|integer',
+                'received_items.*.qty_received' => 'required|integer|min:1',
+                'received_items.*.unit_cost' => 'nullable|numeric|min:0',
+                'received_items.*.sale_price' => 'nullable|numeric|min:0',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation réception échouée', [
+                'errors' => $e->errors(),
+                'input' => $request->all()
+            ]);
+            return response()->json([
+                'error' => 'Données invalides',
+                'details' => $e->errors()
+            ], 422);
+        }
 
         try {
             $purchase = $this->service->receivePurchase($purchase->id, $validated['received_items']);
             return response()->json($purchase);
         } catch (\Exception $e) {
+            \Log::error('Erreur réception achat', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
@@ -168,26 +186,27 @@ class ApprovisionnementController extends Controller
     {
         $tenantId = auth()->guard('sanctum')->user()->tenant_id;
         $perPage = min($request->query('per_page', 50), 100);
+        $status = $request->query('status', '');
+        $fromWarehouseId = $request->query('from_warehouse_id', '');
+        $page = $request->query('page', 1);
+        
+        // Cache pour les listes fréquentes
+        $cacheKey = "stock_requests_{$tenantId}_{$status}_{$fromWarehouseId}_{$perPage}_{$page}";
+        
+        $requests = Cache::remember($cacheKey, 300, function () use ($tenantId, $perPage, $status, $fromWarehouseId) {
+            $query = StockRequest::where('tenant_id', $tenantId)
+                ->select(['id', 'reference', 'status', 'priority', 'from_warehouse_id', 'to_warehouse_id', 'requested_by', 'needed_by_date', 'created_at']);
 
-        $query = StockRequest::where('tenant_id', $tenantId)
-            ->select(['id', 'reference', 'status', 'priority', 'from_warehouse_id', 'to_warehouse_id', 'requested_by', 'needed_by_date', 'created_at'])
-            ->with([
-                'items:id,stock_request_id,product_id,quantity_requested', 
-                'items.product:id,name,code',
-                'requestedByUser:id,name',
-                'fromWarehouse:id,name',
-                'toWarehouse:id,name',
-            ]);
+            if ($status) {
+                $query->where('status', $status);
+            }
 
-        if ($request->has('status')) {
-            $query->where('status', $request->query('status'));
-        }
+            if ($fromWarehouseId) {
+                $query->where('from_warehouse_id', $fromWarehouseId);
+            }
 
-        if ($request->has('from_warehouse_id')) {
-            $query->where('from_warehouse_id', $request->query('from_warehouse_id'));
-        }
-
-        $requests = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            return $query->orderBy('created_at', 'desc')->paginate($perPage);
+        });
 
         return response()->json($requests);
     }
@@ -269,24 +288,32 @@ class ApprovisionnementController extends Controller
     {
         $tenantId = auth()->guard('sanctum')->user()->tenant_id;
         $perPage = min($request->query('per_page', 50), 100);
+        $status = $request->query('status', '');
+        $fromWarehouseId = $request->query('from_warehouse_id', '');
+        $toWarehouseId = $request->query('to_warehouse_id', '');
+        $page = $request->query('page', 1);
+        
+        // Cache pour les listes fréquentes
+        $cacheKey = "transfers_{$tenantId}_{$status}_{$fromWarehouseId}_{$toWarehouseId}_{$perPage}_{$page}";
+        
+        $transfers = Cache::remember($cacheKey, 300, function () use ($tenantId, $perPage, $status, $fromWarehouseId, $toWarehouseId) {
+            $query = Transfer::where('tenant_id', $tenantId)
+                ->select(['id', 'reference', 'status', 'from_warehouse_id', 'to_warehouse_id', 'total_items', 'created_at']);
 
-        $query = Transfer::where('tenant_id', $tenantId)
-            ->select(['id', 'reference', 'status', 'from_warehouse_id', 'to_warehouse_id', 'total_items', 'created_at'])
-            ->with(['items:id,transfer_id,product_id,quantity', 'items.product:id,name,code']);
+            if ($status) {
+                $query->where('status', $status);
+            }
 
-        if ($request->has('status')) {
-            $query->where('status', $request->query('status'));
-        }
+            if ($fromWarehouseId) {
+                $query->where('from_warehouse_id', $fromWarehouseId);
+            }
 
-        if ($request->has('from_warehouse_id')) {
-            $query->where('from_warehouse_id', $request->query('from_warehouse_id'));
-        }
+            if ($toWarehouseId) {
+                $query->where('to_warehouse_id', $toWarehouseId);
+            }
 
-        if ($request->has('to_warehouse_id')) {
-            $query->where('to_warehouse_id', $request->query('to_warehouse_id'));
-        }
-
-        $transfers = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            return $query->orderBy('created_at', 'desc')->paginate($perPage);
+        });
 
         return response()->json($transfers);
     }
@@ -346,19 +373,26 @@ class ApprovisionnementController extends Controller
     public function listInventories(Request $request): JsonResponse
     {
         $tenantId = auth()->guard('sanctum')->user()->tenant_id;
+        $warehouseId = $request->query('warehouse_id', '');
+        $status = $request->query('status', '');
+        $page = $request->query('page', 1);
+        
+        $cacheKey = "inventories_{$tenantId}_{$warehouseId}_{$status}_{$page}";
+        
+        $inventories = Cache::remember($cacheKey, 300, function () use ($tenantId, $warehouseId, $status) {
+            $query = Inventory::where('tenant_id', $tenantId)
+                ->select(['id', 'reference', 'status', 'warehouse_id', 'created_by', 'created_at']);
 
-        $query = Inventory::where('tenant_id', $tenantId)
-            ->with(['items.product', 'warehouse', 'user']);
+            if ($warehouseId) {
+                $query->where('warehouse_id', $warehouseId);
+            }
 
-        if ($request->has('warehouse_id')) {
-            $query->where('warehouse_id', $request->query('warehouse_id'));
-        }
+            if ($status) {
+                $query->where('status', $status);
+            }
 
-        if ($request->has('status')) {
-            $query->where('status', $request->query('status'));
-        }
-
-        $inventories = $query->orderBy('created_at', 'desc')->paginate(20);
+            return $query->orderBy('created_at', 'desc')->paginate(20);
+        });
 
         return response()->json($inventories);
     }
@@ -400,31 +434,38 @@ class ApprovisionnementController extends Controller
     public function listMovements(Request $request): JsonResponse
     {
         $tenantId = auth()->guard('sanctum')->user()->tenant_id;
+        $productId = $request->query('product_id', '');
+        $warehouseId = $request->query('warehouse_id', '');
+        $type = $request->query('type', '');
+        $page = $request->query('page', 1);
+        
+        $cacheKey = "movements_{$tenantId}_{$productId}_{$warehouseId}_{$type}_{$page}";
+        
+        $movements = Cache::remember($cacheKey, 300, function () use ($tenantId, $productId, $warehouseId, $type, $request) {
+            $query = StockMovement::where('tenant_id', $tenantId)
+                ->select(['id', 'type', 'product_id', 'quantity', 'from_warehouse_id', 'to_warehouse_id', 'reference', 'created_at']);
 
-        $query = StockMovement::where('tenant_id', $tenantId)
-            ->with(['product', 'fromWarehouse', 'toWarehouse', 'user']);
+            if ($productId) {
+                $query->where('product_id', $productId);
+            }
 
-        if ($request->has('product_id')) {
-            $query->where('product_id', $request->query('product_id'));
-        }
+            if ($warehouseId) {
+                $query->where(function ($q) use ($warehouseId) {
+                    $q->where('from_warehouse_id', $warehouseId)
+                        ->orWhere('to_warehouse_id', $warehouseId);
+                });
+            }
 
-        if ($request->has('warehouse_id')) {
-            $warehouseId = $request->query('warehouse_id');
-            $query->where(function ($q) use ($warehouseId) {
-                $q->where('from_warehouse_id', $warehouseId)
-                    ->orWhere('to_warehouse_id', $warehouseId);
-            });
-        }
+            if ($type) {
+                $query->where('type', $type);
+            }
 
-        if ($request->has('type')) {
-            $query->where('type', $request->query('type'));
-        }
+            if ($request->has('from') && $request->has('to')) {
+                $query->whereBetween('created_at', [$request->query('from'), $request->query('to')]);
+            }
 
-        if ($request->has('from') && $request->has('to')) {
-            $query->whereBetween('created_at', [$request->query('from'), $request->query('to')]);
-        }
-
-        $movements = $query->orderBy('created_at', 'desc')->paginate(50);
+            return $query->orderBy('created_at', 'desc')->paginate(50);
+        });
 
         return response()->json($movements);
     }
@@ -437,29 +478,34 @@ class ApprovisionnementController extends Controller
     {
         $tenantId = auth()->guard('sanctum')->user()->tenant_id;
         $perPage = min($request->query('per_page', 20), 100);
+        $status = $request->query('status', '');
+        $posId = $request->query('pos_id', '');
+        $page = $request->query('page', 1);
+        
+        $cacheKey = "pos_orders_{$tenantId}_{$status}_{$posId}_{$perPage}_{$page}";
+        
+        $orders = Cache::remember($cacheKey, 60, function () use ($tenantId, $perPage, $status, $posId, $request) {
+            $query = PosOrder::where('tenant_id', $tenantId)
+                ->select(['id', 'reference', 'status', 'total', 'pos_id', 'customer_id', 'created_by', 'created_at']);
 
-        $query = PosOrder::where('tenant_id', $tenantId)
-            ->with(['items.product', 'pos', 'customer', 'createdByUser', 'servedByUser']);
+            if ($status) {
+                $query->where('status', $status);
+            }
 
-        if ($request->has('status')) {
-            $query->where('status', $request->query('status'));
-        }
+            if ($posId) {
+                $query->where('pos_id', $posId);
+            }
 
-        if ($request->has('pos_id')) {
-            $query->where('pos_id', $request->query('pos_id'));
-        }
+            if ($request->has('date')) {
+                $query->whereDate('created_at', $request->query('date'));
+            }
 
-        // Filtre par date
-        if ($request->has('date')) {
-            $query->whereDate('created_at', $request->query('date'));
-        }
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->query('user_id'));
+            }
 
-        // Filtre par utilisateur (serveur)
-        if ($request->has('user_id')) {
-            $query->where('user_id', $request->query('user_id'));
-        }
-
-        $orders = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            return $query->orderBy('created_at', 'desc')->paginate($perPage);
+        });
 
         return response()->json($orders);
     }

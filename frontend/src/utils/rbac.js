@@ -267,6 +267,7 @@ export function getAccessibleRoutes(userRole) {
   // ✅ Reçoit toutes les ventes des Serveurs
   // ✅ Seul à approuver/servir/valider les ventes
   // ✅ Gère caisse, stock, transferts, approvisionnements
+  // ✅ Option B: Délègue stock aux serveurs
   // ❌ Pas d'accès aux Fournisseurs dans Collaborateurs
   // ❌ Pas d'accès aux Paramètres (Configuration, Paiements, Général)
   // ========================================
@@ -286,6 +287,9 @@ export function getAccessibleRoutes(userRole) {
     
     // Ventes - Approuver/Servir/Valider les commandes des serveurs
     { label: 'Ventes', icon: '🍽️', path: '/pos/manager-orders' },
+    
+    // Option B: Stock Délégué aux Serveurs
+    { label: 'Stock Serveurs', icon: '📤', path: '/server-stock' },
     
     // Parent: Gestion Financière
     { 
@@ -346,6 +350,7 @@ export function getAccessibleRoutes(userRole) {
   // SERVEUR POS - Crée des ventes uniquement
   // ✅ Peut créer des ventes clients
   // ✅ Voit uniquement SES ventes initiées
+  // ✅ Option B: Gère son stock délégué et fait le point
   // ❌ Ne peut PAS approuver, servir, valider (tout va au Gérant)
   // ❌ Pas d'accès fournisseurs ni magasin
   // ========================================
@@ -353,6 +358,7 @@ export function getAccessibleRoutes(userRole) {
     { label: 'Dashboard', icon: '📊', path: '/dashboard' },
     { label: 'Point de Vente', icon: '🛍️', path: '/pos' },
     { label: 'Mes Commandes', icon: '📋', path: '/pos/my-orders' },
+    { label: 'Mon Stock', icon: '📦', path: '/server-stock' },
   ];
 
   // ========================================

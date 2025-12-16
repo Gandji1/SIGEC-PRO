@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
-  timeout: 8000, // Réduit de 15s à 8s pour fail-fast
+  timeout: 30000, // 30 secondes pour les requêtes lentes
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -14,7 +14,7 @@ const apiClient = axios.create({
 
 // Cache simple en mémoire pour les requêtes GET
 const requestCache = new Map();
-const CACHE_TTL = 30000; // 30 secondes
+const CACHE_TTL = 300000; // 5 minutes pour réduire les appels API
 
 // Add tenant header and token to all requests
 apiClient.interceptors.request.use((config) => {

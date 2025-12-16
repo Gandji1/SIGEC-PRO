@@ -63,6 +63,7 @@ const EnrichedInventoryPage = lazy(() => import('./pages/EnrichedInventoryPage')
 const TenantDashboardPage = lazy(() => import('./pages/TenantDashboardPage'));
 const ImmobilisationsPage = lazy(() => import('./pages/ImmobilisationsPage'));
 const RapprochementBancairePage = lazy(() => import('./pages/RapprochementBancairePage'));
+const ServerStockPage = lazy(() => import('./pages/ServerStockPage'));
 
 function PrivateRoute({ children, skipSubscriptionCheck = false }) {
   const { token } = useTenantStore();
@@ -331,6 +332,9 @@ export default function App() {
 
         {/* Inventaire Enrichi */}
         <Route path="/inventory-enriched" element={<PrivateRoute><EnrichedInventoryPage /></PrivateRoute>} />
+
+        {/* Option B: Stock Délégué aux Serveurs */}
+        <Route path="/server-stock" element={<PrivateRoute><ServerStockPage /></PrivateRoute>} />
 
         {/* Redirect */}
         <Route path="*" element={<Navigate to="/dashboard" />} />

@@ -50,9 +50,15 @@ class ApprovisionnementService
         $this->init();
 
         return DB::transaction(function () use ($data) {
+            // FLUX SIMPLIFIÉ: Gérant crée → IMMÉDIATEMENT visible par fournisseur
+            // Si un supplier_id est fourni, la commande est directement soumise au fournisseur
+            $hasSupplier = !empty($data['supplier_id']);
+            $initialStatus = $hasSupplier ? Purchase::STATUS_SUBMITTED : 'draft';
+            
             $purchase = Purchase::create([
                 'tenant_id' => $this->tenantId,
                 'user_id' => $this->userId,
+                'created_by_user_id' => $this->userId,
                 'warehouse_id' => $data['warehouse_id'] ?? $this->getGrosWarehouseId(),
                 'supplier_id' => $data['supplier_id'] ?? null,
                 'reference' => $this->generatePurchaseReference(),
@@ -61,13 +67,24 @@ class ApprovisionnementService
                 'supplier_email' => $data['supplier_email'] ?? null,
                 'expected_date' => $data['expected_date'] ?? null,
                 'notes' => $data['notes'] ?? null,
-                'status' => 'draft',
+                'status' => $initialStatus,
+                'submitted_at' => $hasSupplier ? now() : null,
             ]);
 
+            $totalAmount = 0;
             foreach ($data['items'] as $item) {
-                $qty = $item['qty_ordered'] ?? 1;
-                $price = $item['expected_unit_cost'] ?? 0;
+                $qty = (int)($item['qty_ordered'] ?? $item['quantity'] ?? 1);
+                // Accepter plusieurs noms de champs pour le prix
+                $price = (float)($item['expected_unit_cost'] ?? $item['unit_price'] ?? $item['unit_cost'] ?? 0);
+                
+                // Si prix = 0, essayer de récupérer le prix d'achat du produit
+                if ($price <= 0) {
+                    $product = \App\Models\Product::find($item['product_id']);
+                    $price = (float)($product->purchase_price ?? $product->cost_price ?? $product->price ?? 0);
+                }
+                
                 $subtotal = $qty * $price;
+                $totalAmount += $subtotal;
                 
                 PurchaseItem::create([
                     'tenant_id' => $this->tenantId,
@@ -79,19 +96,34 @@ class ApprovisionnementService
                     'line_total' => $subtotal,
                 ]);
             }
+            
+            // Mettre à jour le total directement
+            $purchase->subtotal = $totalAmount;
+            $purchase->total = $totalAmount;
+            $purchase->save();
 
             $purchase->calculateTotals();
 
             AuditLog::create([
                 'tenant_id' => $this->tenantId,
                 'user_id' => $this->userId,
-                'action' => 'create',
+                'action' => $hasSupplier ? 'create_and_submit' : 'create',
                 'model_type' => 'purchase',
                 'model_id' => $purchase->id,
                 'payload' => $data,
-                'description' => 'Commande achat creee',
+                'description' => $hasSupplier ? 'Commande créée et envoyée au fournisseur' : 'Commande achat creee',
                 'ip_address' => request()->ip(),
             ]);
+
+            // Notifier le fournisseur si la commande est soumise
+            if ($hasSupplier) {
+                try {
+                    $notificationService = app(\App\Services\SupplierNotificationService::class);
+                    $notificationService->notifySupplierNewOrder($purchase->fresh()->load(['supplier', 'tenant', 'items.product']));
+                } catch (\Exception $e) {
+                    \Log::warning('Notification fournisseur échouée: ' . $e->getMessage());
+                }
+            }
 
             return $purchase->load('items.product');
         });
@@ -132,8 +164,9 @@ class ApprovisionnementService
                 ->with('items')
                 ->findOrFail($purchaseId);
 
-            if (!in_array($purchase->status, ['ordered', 'confirmed', 'partial'])) {
-                throw new Exception('Cette commande ne peut pas etre receptionnee');
+            // Statuts valides pour réception: submitted (chez fournisseur), confirmed, shipped, delivered
+            if (!in_array($purchase->status, ['submitted', 'ordered', 'confirmed', 'shipped', 'delivered', 'partial'])) {
+                throw new Exception('Cette commande ne peut pas etre receptionnee. Statut actuel: ' . $purchase->status);
             }
 
             $warehouseId = $purchase->warehouse_id ?? $this->getGrosWarehouseId();
@@ -185,8 +218,19 @@ class ApprovisionnementService
                 return $item->quantity_received >= $item->quantity_ordered;
             });
 
-            $purchase->status = $allReceived ? 'received' : 'partial';
-            $purchase->received_date = $allReceived ? now() : null;
+            if ($allReceived) {
+                // Si le paiement a déjà été validé par le fournisseur, passer directement à 'paid'
+                if ($purchase->payment_validated_by_supplier) {
+                    $purchase->status = 'paid';
+                    $purchase->paid_at = $purchase->payment_validated_at ?? now();
+                } else {
+                    $purchase->status = 'received';
+                }
+                $purchase->received_date = now();
+                $purchase->received_at = now();
+            } else {
+                $purchase->status = 'partial';
+            }
             $purchase->save();
 
             // Ecritures comptables

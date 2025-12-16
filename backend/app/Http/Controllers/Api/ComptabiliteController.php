@@ -12,7 +12,21 @@ class ComptabiliteController extends Controller
 {
     private function getTenantId(Request $request)
     {
-        return auth()->guard('sanctum')->user()->tenant_id ?? $request->header('X-Tenant-ID');
+        $user = auth()->guard('sanctum')->user();
+        
+        if ($user && $user->tenant_id) {
+            return (int) $user->tenant_id;
+        }
+        
+        // SuperAdmin peut utiliser le header X-Tenant-ID pour impersonation
+        if ($user && in_array($user->role, ['super_admin', 'superadmin'])) {
+            $tenantId = $request->header('X-Tenant-ID');
+            if ($tenantId) {
+                return (int) $tenantId;
+            }
+        }
+        
+        return null;
     }
 
     /**

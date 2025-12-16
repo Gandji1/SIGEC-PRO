@@ -82,80 +82,80 @@ export default function ServeurDashboard() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header compact */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <ShoppingBag className="text-orange-500" size={24} />
-            Espace Serveur
+    <div className="space-y-3 sm:space-y-4">
+      {/* Header compact - MOBILE OPTIMIZED */}
+      <div className="flex justify-between items-center gap-2">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <ShoppingBag className="text-orange-500" size={20} />
+            <span className="truncate">Espace Serveur</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Bienvenue, {user?.name}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm truncate">Bienvenue, {user?.name?.split(' ')[0]}</p>
         </div>
         <button 
           onClick={() => navigate('/pos')}
-          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2"
+          className="bg-orange-500 hover:bg-orange-600 text-white px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium flex items-center gap-1 sm:gap-2 text-xs sm:text-sm flex-shrink-0"
         >
-          <ShoppingBag size={18} />
-          Nouvelle Commande
+          <ShoppingBag size={16} />
+          <span className="hidden sm:inline">Nouvelle</span> Cmd
         </button>
       </div>
 
-      {/* KPIs compacts */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* KPIs compacts - MOBILE OPTIMIZED */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         {loading ? (
           [1,2,3,4].map(i => <CardSkeleton key={i} />)
         ) : (
           kpis.map((kpi, idx) => (
-            <div key={idx} className={`bg-gradient-to-br ${colorMap[kpi.color]} dark:from-slate-800 dark:to-slate-800 dark:border-slate-700 border rounded-xl p-4`}>
+            <div key={idx} className={`bg-gradient-to-br ${colorMap[kpi.color]} dark:from-slate-800 dark:to-slate-800 dark:border-slate-700 border rounded-lg sm:rounded-xl p-2 sm:p-4`}>
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold mb-1 dark:text-gray-300">{kpi.title}</p>
-                  <p className="text-xl font-bold dark:text-white">{kpi.value}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-semibold mb-0.5 sm:mb-1 dark:text-gray-300 truncate">{kpi.title}</p>
+                  <p className="text-base sm:text-xl font-bold dark:text-white truncate">{kpi.value}</p>
                 </div>
-                <kpi.icon size={28} className="opacity-30" />
+                <kpi.icon size={20} className="opacity-30 flex-shrink-0" />
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Actions Rapides - Icônes */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Actions Rapides - MOBILE OPTIMIZED */}
+      <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
         <button 
           onClick={() => navigate('/pos')}
-          className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 rounded-xl transition flex flex-col items-center gap-1"
+          className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 sm:py-3 rounded-lg sm:rounded-xl transition flex flex-col items-center gap-0.5 sm:gap-1"
         >
-          <ShoppingBag size={20} />
-          <span className="text-xs">Commande</span>
+          <ShoppingBag size={18} />
+          <span className="text-[9px] sm:text-xs">Cmd</span>
         </button>
         <button 
           onClick={() => navigate('/pos/tables')}
-          className="bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded-xl transition flex flex-col items-center gap-1"
+          className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 sm:py-3 rounded-lg sm:rounded-xl transition flex flex-col items-center gap-0.5 sm:gap-1"
         >
-          <Users size={20} />
-          <span className="text-xs">Tables</span>
+          <Users size={18} />
+          <span className="text-[9px] sm:text-xs">Tables</span>
         </button>
         <button 
           onClick={() => navigate('/pos/kitchen')}
-          className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-xl transition flex flex-col items-center gap-1"
+          className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 sm:py-3 rounded-lg sm:rounded-xl transition flex flex-col items-center gap-0.5 sm:gap-1"
         >
-          <Clock size={20} />
-          <span className="text-xs">Statut</span>
+          <Clock size={18} />
+          <span className="text-[9px] sm:text-xs">Statut</span>
         </button>
         <button 
           onClick={fetchDashboard}
-          className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-3 rounded-xl transition flex flex-col items-center gap-1"
+          className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 sm:py-3 rounded-lg sm:rounded-xl transition flex flex-col items-center gap-0.5 sm:gap-1"
         >
-          <TrendingUp size={20} />
-          <span className="text-xs">Actualiser</span>
+          <TrendingUp size={18} />
+          <span className="text-[9px] sm:text-xs">Refresh</span>
         </button>
       </div>
 
-      {/* Mes Commandes en Cours */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-slate-700">
-        <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <Clock size={18} className="text-orange-500" />
+      {/* Mes Commandes en Cours - MOBILE OPTIMIZED */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 dark:border-slate-700">
+        <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 flex items-center gap-2">
+          <Clock size={16} className="text-orange-500" />
           Mes Commandes
         </h2>
         {myOrders.length === 0 ? (
@@ -208,14 +208,14 @@ export default function ServeurDashboard() {
         )}
       </div>
 
-      {/* Indicateur de statut */}
-      <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-          <span className="text-gray-600">Connecté au POS</span>
+      {/* Indicateur de statut - MOBILE OPTIMIZED */}
+      <div className="bg-gray-50 rounded-lg sm:rounded-xl p-2 sm:p-4 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-pulse"></span>
+          <span className="text-gray-600 text-xs sm:text-sm">Connecté</span>
         </div>
-        <span className="text-sm text-gray-500">
-          Dernière mise à jour: {new Date().toLocaleTimeString('fr-FR')}
+        <span className="text-[10px] sm:text-sm text-gray-500">
+          {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
     </div>

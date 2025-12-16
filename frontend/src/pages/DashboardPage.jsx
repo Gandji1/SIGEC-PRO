@@ -80,79 +80,79 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Header compact */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{t('nav.dashboard')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{language === 'fr' ? 'Bienvenue' : 'Welcome'}, {user?.name}!</p>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{t('nav.dashboard')}</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{language === 'fr' ? 'Bienvenue' : 'Welcome'}, {user?.name?.split(' ')[0]}!</p>
         </div>
       </div>
 
-      {/* Stats Grid - Design moderne avec icônes carrées */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Stats Grid - Design moderne avec icônes carrées - MOBILE OPTIMIZED */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         {/* Ventes */}
-        <div className="stat-card">
-          <div className="flex items-center gap-4">
-            <div className="stat-card-icon bg-blue-100 dark:bg-blue-500/20">
-              <TrendingUp size={22} className="text-blue-600 dark:text-blue-400" />
+        <div className="stat-card p-2 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="stat-card-icon w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-500/20">
+              <TrendingUp size={16} className="text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ventes</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalSales}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ventes</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">{stats.totalSales}</p>
             </div>
           </div>
         </div>
 
         {/* Revenus */}
-        <div className="stat-card">
-          <div className="flex items-center gap-4">
-            <div className="stat-card-icon bg-green-100 dark:bg-green-500/20">
-              <DollarSign size={22} className="text-green-600 dark:text-green-400" />
+        <div className="stat-card p-2 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="stat-card-icon w-8 h-8 sm:w-10 sm:h-10 bg-green-100 dark:bg-green-500/20">
+              <DollarSign size={16} className="text-green-600 dark:text-green-400" />
             </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Revenus</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.totalRevenue.toLocaleString()}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Revenus</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">{stats.totalRevenue.toLocaleString()}</p>
             </div>
           </div>
         </div>
 
         {/* Stock bas */}
-        <div className="stat-card">
-          <div className="flex items-center gap-4">
-            <div className="stat-card-icon bg-orange-100 dark:bg-orange-500/20">
-              <Package size={22} className="text-orange-600 dark:text-orange-400" />
+        <div className="stat-card p-2 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="stat-card-icon w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 dark:bg-orange-500/20">
+              <Package size={16} className="text-orange-600 dark:text-orange-400" />
             </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Stock bas</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.lowStockProducts}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Stock</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">{stats.lowStockProducts}</p>
             </div>
           </div>
         </div>
 
         {/* Achats */}
-        <div className="stat-card">
-          <div className="flex items-center gap-4">
-            <div className="stat-card-icon bg-purple-100 dark:bg-purple-500/20">
-              <ShoppingCart size={22} className="text-purple-600 dark:text-purple-400" />
+        <div className="stat-card p-2 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="stat-card-icon w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 dark:bg-purple-500/20">
+              <ShoppingCart size={16} className="text-purple-600 dark:text-purple-400" />
             </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Achats</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.pendingPurchases}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Achats</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">{stats.pendingPurchases}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Charts - Design compact */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      {/* Charts - Design compact - MOBILE OPTIMIZED */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {/* Revenue Chart */}
-        <div className="card p-5">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <BarChart3 size={18} className="text-blue-500" />
-            Revenus (7 jours)
+        <div className="card p-3 sm:p-5">
+          <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2 sm:mb-4 flex items-center gap-2">
+            <BarChart3 size={16} className="text-blue-500" />
+            Revenus (7j)
           </h2>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={160} className="sm:!h-[220px]">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" className="dark:stroke-gray-700" />
               <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} />
@@ -172,12 +172,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Sales Count Chart */}
-        <div className="card p-5">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <TrendingUp size={18} className="text-green-500" />
-            Ventes (7 jours)
+        <div className="card p-3 sm:p-5">
+          <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2 sm:mb-4 flex items-center gap-2">
+            <TrendingUp size={16} className="text-green-500" />
+            Ventes (7j)
           </h2>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={160} className="sm:!h-[220px]">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" className="dark:stroke-gray-700" />
               <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} />
@@ -197,33 +197,33 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions - Boutons icônes modernes */}
-      <div className="card p-5">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">Actions rapides</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <a href="/pos" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all group">
-            <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Plus size={24} className="text-white" />
+      {/* Quick Actions - Boutons icônes modernes - MOBILE OPTIMIZED */}
+      <div className="card p-3 sm:p-5">
+        <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2 sm:mb-4">Actions rapides</h2>
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
+          <a href="/pos" className="flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-4 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all group">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Plus size={18} className="text-white" />
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Vente</span>
+            <span className="text-[10px] sm:text-sm font-medium text-gray-700 dark:text-gray-300">Vente</span>
           </a>
-          <a href="/products" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 transition-all group">
-            <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Box size={24} className="text-white" />
+          <a href="/products" className="flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-4 rounded-lg sm:rounded-xl bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 transition-all group">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-green-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Box size={18} className="text-white" />
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Produits</span>
+            <span className="text-[10px] sm:text-sm font-medium text-gray-700 dark:text-gray-300">Produits</span>
           </a>
-          <a href="/purchases" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-all group">
-            <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ShoppingCart size={24} className="text-white" />
+          <a href="/purchases" className="flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-4 rounded-lg sm:rounded-xl bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-all group">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ShoppingCart size={18} className="text-white" />
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Achats</span>
+            <span className="text-[10px] sm:text-sm font-medium text-gray-700 dark:text-gray-300">Achats</span>
           </a>
-          <a href="/reports" className="flex flex-col items-center gap-2 p-4 rounded-xl bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all group">
-            <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <FileText size={24} className="text-white" />
+          <a href="/reports" className="flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-4 rounded-lg sm:rounded-xl bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all group">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <FileText size={18} className="text-white" />
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Rapports</span>
+            <span className="text-[10px] sm:text-sm font-medium text-gray-700 dark:text-gray-300">Rapports</span>
           </a>
         </div>
       </div>

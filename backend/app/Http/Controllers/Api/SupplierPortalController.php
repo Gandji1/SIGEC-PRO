@@ -161,8 +161,17 @@ class SupplierPortalController extends Controller
         }
 
         // Récupérer les commandes (achats) du fournisseur
+        // IMPORTANT: Ne montrer que les commandes approuvées par le tenant (submitted ou après)
         $purchases = Purchase::where('supplier_id', $supplier->id)
-            ->with(['items.product', 'warehouse'])
+            ->whereIn('status', [
+                Purchase::STATUS_SUBMITTED,    // Approuvée par tenant, envoyée au fournisseur
+                Purchase::STATUS_CONFIRMED,    // Confirmée par fournisseur
+                Purchase::STATUS_SHIPPED,      // Expédiée
+                Purchase::STATUS_DELIVERED,    // Livrée
+                Purchase::STATUS_RECEIVED,     // Réceptionnée par gérant
+                Purchase::STATUS_PAID,         // Payée
+            ])
+            ->with(['items.product', 'warehouse', 'tenant:id,name', 'createdBy:id,name'])
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get();
@@ -206,10 +215,20 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Fournisseur non trouvé'], 404);
         }
 
+        // IMPORTANT: Ne montrer que les commandes approuvées par le tenant
         $query = Purchase::where('supplier_id', $supplier->id)
-            ->with(['items.product', 'warehouse', 'createdBy']);
+            ->whereIn('status', [
+                Purchase::STATUS_SUBMITTED,
+                Purchase::STATUS_CONFIRMED,
+                Purchase::STATUS_SHIPPED,
+                Purchase::STATUS_DELIVERED,
+                Purchase::STATUS_RECEIVED,
+                Purchase::STATUS_PAID,
+                Purchase::STATUS_CANCELLED,
+            ])
+            ->with(['items.product', 'warehouse', 'createdBy', 'tenant:id,name']);
 
-        // Filtres
+        // Filtres additionnels
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
@@ -232,8 +251,18 @@ class SupplierPortalController extends Controller
 
         $supplier = Supplier::where('user_id', $user->id)->first();
         
+        // Vérifier que la commande est visible pour le fournisseur (approuvée par tenant)
         $order = Purchase::where('supplier_id', $supplier->id)
-            ->with(['items.product', 'warehouse', 'createdBy'])
+            ->whereIn('status', [
+                Purchase::STATUS_SUBMITTED,
+                Purchase::STATUS_CONFIRMED,
+                Purchase::STATUS_SHIPPED,
+                Purchase::STATUS_DELIVERED,
+                Purchase::STATUS_RECEIVED,
+                Purchase::STATUS_PAID,
+                Purchase::STATUS_CANCELLED,
+            ])
+            ->with(['items.product', 'warehouse', 'createdBy', 'tenant:id,name'])
             ->findOrFail($id);
 
         return response()->json(['data' => $order]);
@@ -254,12 +283,13 @@ class SupplierPortalController extends Controller
         
         $order = Purchase::where('supplier_id', $supplier->id)->findOrFail($id);
 
-        if (!in_array($order->status, ['pending', 'submitted'])) {
-            return response()->json(['message' => 'Cette commande ne peut plus être confirmée'], 422);
+        // Le fournisseur ne peut confirmer que les commandes soumises (approuvées par tenant)
+        if ($order->status !== Purchase::STATUS_SUBMITTED) {
+            return response()->json(['message' => 'Seules les commandes soumises peuvent être confirmées. Statut actuel: ' . $order->status], 422);
         }
 
         $validated = $request->validate([
-            'expected_delivery_date' => 'nullable|date|after:today',
+            'expected_delivery_date' => 'nullable|date',
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -361,6 +391,7 @@ class SupplierPortalController extends Controller
 
     /**
      * Valider le paiement reçu
+     * RÈGLE MÉTIER: Seul le fournisseur peut valider qu'il a reçu le paiement
      */
     public function validatePayment(Request $request, $id): JsonResponse
     {
@@ -372,26 +403,52 @@ class SupplierPortalController extends Controller
 
         $supplier = Supplier::where('user_id', $user->id)->first();
         
+        if (!$supplier) {
+            return response()->json(['message' => 'Fournisseur non trouvé'], 404);
+        }
+        
         $order = Purchase::where('supplier_id', $supplier->id)->findOrFail($id);
 
-        if ($order->status !== 'delivered') {
-            return response()->json(['message' => 'La commande doit être livrée avant validation du paiement'], 422);
+        // Le paiement peut être validé après livraison (avant ou après réception)
+        if (!in_array($order->status, [Purchase::STATUS_DELIVERED, Purchase::STATUS_RECEIVED])) {
+            return response()->json([
+                'message' => 'La commande doit être livrée avant validation du paiement. Statut actuel: ' . $order->status
+            ], 422);
         }
 
         $validated = $request->validate([
             'payment_reference' => 'nullable|string|max:100',
             'payment_notes' => 'nullable|string|max:500',
+            'amount_received' => 'nullable|numeric|min:0',
         ]);
 
-        $order->update([
-            'status' => 'paid',
-            'amount_paid' => $order->total,
+        // RÈGLE MÉTIER: Le fournisseur valide qu'il a reçu le paiement du gérant
+        // Cela NE CHANGE PAS le statut - le gérant doit encore réceptionner
+        // Le statut 'paid' n'est atteint qu'après réception par le gérant
+        $updateData = [
+            'payment_validated_by_supplier' => true,
             'payment_validated_at' => now(),
-            'payment_reference' => $validated['payment_reference'] ?? null,
-        ]);
+            'amount_paid' => $validated['amount_received'] ?? $order->total,
+            'metadata' => array_merge($order->metadata ?? [], [
+                'payment_reference' => $validated['payment_reference'] ?? null,
+                'payment_notes' => $validated['payment_notes'] ?? null,
+            ]),
+        ];
+        
+        // Si la commande est déjà réceptionnée, on peut passer à 'paid'
+        if ($order->status === Purchase::STATUS_RECEIVED) {
+            $updateData['status'] = Purchase::STATUS_PAID;
+            $updateData['paid_at'] = now();
+        }
+        // Sinon, on garde le statut 'delivered' - le gérant doit réceptionner
+        
+        $order->update($updateData);
+
+        // Notifier le tenant que le paiement a été validé par le fournisseur
+        $this->notificationService->notifyTenantPaymentValidated($order->fresh()->load(['supplier', 'tenant']));
 
         return response()->json([
-            'message' => 'Paiement validé',
+            'message' => 'Paiement validé avec succès',
             'data' => $order->fresh()
         ]);
     }
