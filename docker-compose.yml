@@ -10,8 +10,8 @@ services:
     restart: unless-stopped
     working_dir: /var/www
     environment:
-      - APP_ENV=local
-      - APP_DEBUG=true
+      - APP_ENV=production
+      - APP_DEBUG=false
       - DB_CONNECTION=sqlite
     volumes:
       # Mount source code but exclude vendor directory (already in image)

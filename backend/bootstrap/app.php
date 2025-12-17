@@ -32,6 +32,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'plan_limit' => \App\Http\Middleware\CheckPlanLimits::class,
             'tenant' => \App\Http\Middleware\TenantResolver::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+
+        'api/*',
+
+    ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Retourner JSON pour les erreurs d'authentification API
