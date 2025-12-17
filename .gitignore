@@ -18,3 +18,4 @@ storage/postgres/
 storage/redis/
 .next/
 .vercel/
+backend/storage/framework/views
