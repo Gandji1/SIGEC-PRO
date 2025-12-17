@@ -15,14 +15,13 @@ $allowedOrigins = env('APP_ENV') === 'production'
     : ['*'];
 
 return [
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
-    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    'allowed_origins' => $allowedOrigins,
-    'allowed_origins_patterns' => env('APP_ENV') === 'production' 
-        ? ['/^https:\/\/.*\.sigec\.app$/'] // Sous-domaines en production
-        : [],
-    'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Tenant-ID', 'Accept'],
-    'exposed_headers' => ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
-    'max_age' => 86400, // 24 heures
-    'supports_credentials' => env('APP_ENV') === 'production',
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'register', 'login'],
+    'allowed_methods' => ['*'],
+    // En dev on autorise tout (frontend Vercel + local)
+    'allowed_origins' => ['https://sigec.artbenshow.com'],
+    'allowed_origins_patterns' => [],
+    'allowed_headers' => ['*'],
+    'exposed_headers' => [],
+    'max_age' => 0,
+    'supports_credentials' => true,
 ];

@@ -39,15 +39,18 @@ class AuthController extends Controller
         ]);
 
         // Créer les warehouses par défaut selon le mode
+        $code_id= uniqid();
+        
         if ($validated['mode_pos'] === 'A') {
             // Mode A: détail + POS (pas gros)
-            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-DETAIL', 'name' => 'Détail', 'type' => 'detail']);
-            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-POS', 'name' => 'POS', 'type' => 'pos']);
+
+            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-DETAIL-'.$code_id, 'name' => 'Détail', 'type' => 'detail']);
+            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-POS-'.$code_id, 'name' => 'POS', 'type' => 'pos']);
         } else {
             // Mode B: gros + détail + POS
-            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-GROS', 'name' => 'Gros', 'type' => 'gros']);
-            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-DETAIL', 'name' => 'Détail', 'type' => 'detail']);
-            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-POS', 'name' => 'POS', 'type' => 'pos']);
+            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-GROS-'.$code_id, 'name' => 'Gros', 'type' => 'gros']);
+            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-DETAIL-'.$code_id, 'name' => 'Détail', 'type' => 'detail']);
+            Warehouse::create(['tenant_id' => $tenant->id, 'code' => 'WH-POS-'.$code_id, 'name' => 'POS', 'type' => 'pos']);
         }
 
         // Créer l'utilisateur owner

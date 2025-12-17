@@ -77,7 +77,7 @@ class SecurityHeaders
         }
 
         // Content Security Policy basique
-        $response->headers->set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.fedapay.com https://sandbox-api.fedapay.com https://api.kkiapay.me https://sandbox.momoapi.mtn.com");
+        $response->headers->set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.fedapay.com https://sandbox-api.fedapay.com https://api.kkiapay.me https://sandbox.momoapi.mtn.com https://api.sigec.artbenshow.com");
 
         return $response;
     }

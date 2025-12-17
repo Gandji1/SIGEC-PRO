@@ -1,16 +1,28 @@
-import axios from 'axios';
+import axios from "axios";
+import corsProxy from "./corsProxy";
 
 // URL de base - /api relatif fonctionne avec le proxy Vite
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 30000, // 30 secondes pour les requêtes lentes
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
+  // Configuration CORS pour éviter les erreurs de pré-vérification
+  withCredentials: true,
 });
+
+// Configuration pour les environnements de développement
+if (import.meta.env.DEV) {
+  // En développement, on peut utiliser un proxy ou une configuration spéciale
+  apiClient.defaults.withCredentials = false;
+
+  // Appliquer le middleware de proxy CORS
+  corsProxy.setupCorsProxyMiddleware(apiClient);
+}
 
 // Cache simple en mémoire pour les requêtes GET
 const requestCache = new Map();
@@ -19,28 +31,28 @@ const CACHE_TTL = 300000; // 5 minutes pour réduire les appels API
 // Add tenant header and token to all requests
 apiClient.interceptors.request.use((config) => {
   // Get tenant_id (optimisé - une seule lecture)
-  let tenantId = localStorage.getItem('tenant_id');
+  let tenantId = localStorage.getItem("tenant_id");
   if (!tenantId) {
-    const tenantStr = localStorage.getItem('tenant');
+    const tenantStr = localStorage.getItem("tenant");
     if (tenantStr) {
       try {
         tenantId = JSON.parse(tenantStr)?.id;
-        if (tenantId) localStorage.setItem('tenant_id', tenantId); // Cache pour prochaine fois
+        if (tenantId) localStorage.setItem("tenant_id", tenantId); // Cache pour prochaine fois
       } catch {
         // Silent fail
       }
     }
   }
-  
+
   if (tenantId) {
-    config.headers['X-Tenant-ID'] = tenantId;
+    config.headers["X-Tenant-ID"] = tenantId;
   }
-  
-  const token = localStorage.getItem('token');
+
+  const token = localStorage.getItem("token");
   if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
+    config.headers["Authorization"] = `Bearer ${token}`;
   }
-  
+
   return config;
 });
 
@@ -48,8 +60,9 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => {
     // Cache les réponses GET réussies
-    if (response.config.method === 'get' && response.config.cache !== false) {
-      const cacheKey = response.config.url + JSON.stringify(response.config.params || {});
+    if (response.config.method === "get" && response.config.cache !== false) {
+      const cacheKey =
+        response.config.url + JSON.stringify(response.config.params || {});
       requestCache.set(cacheKey, {
         data: response,
         timestamp: Date.now(),
@@ -59,13 +72,13 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const config = error.config;
-    
+
     // Retry une fois pour les erreurs réseau (pas les 4xx/5xx)
-    if (!config._retry && !error.response && error.code !== 'ECONNABORTED') {
+    if (!config._retry && !error.response && error.code !== "ECONNABORTED") {
       config._retry = true;
       return apiClient(config);
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -76,11 +89,11 @@ apiClient.interceptors.response.use(
 export const cachedGet = async (url, params = {}, ttl = CACHE_TTL) => {
   const cacheKey = url + JSON.stringify(params);
   const cached = requestCache.get(cacheKey);
-  
-  if (cached && (Date.now() - cached.timestamp) < ttl) {
+
+  if (cached && Date.now() - cached.timestamp < ttl) {
     return cached.data;
   }
-  
+
   const response = await apiClient.get(url, { params });
   requestCache.set(cacheKey, { data: response, timestamp: Date.now() });
   return response;

@@ -1,13 +1,32 @@
-FROM node:20-alpine
+# Multi-stage build for React + Vite frontend
+FROM node:20-alpine AS builder
 
+# Set working directory
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
 
-RUN npm install
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci && npm cache clean --force
 
+# Copy source code
 COPY . .
 
-EXPOSE 5173
+# Build the application
+RUN npm run build
 
-CMD ["npm", "run", "dev"]
+# Production stage
+FROM nginx:alpine AS production
+
+# Copy built application to nginx
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

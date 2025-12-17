@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: sigec-backend-app
+    restart: unless-stopped
+    working_dir: /var/www
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost}
+      DB_CONNECTION: ${DB_CONNECTION:-sqlite}
+
+    volumes:
+      - storage-sigec-backend:/var/www/storage
+      - ./database/database.sqlite:/var/www/database/database.sqlite
+    depends_on:
+      - mysql
+    networks:
+      - web
+      - sigec-backend-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sigec-api.rule=Host(`api.sigec.artbenshow.com`)"
+      - "traefik.http.routers.sigec-api.entrypoints=websecure"
+      - "traefik.http.routers.sigec-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sigec-api.loadbalancer.server.port=80"
+      - "traefik.docker.network=web"
+
+  mysql:
+    image: mysql:8.0
+    container_name: sigec-backend-mysql
+    restart: unless-stopped
+    networks:
+      - sigec-backend-network
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-sigec}
+      MYSQL_USER: ${DB_USERNAME:-sigec}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - sigec-mysql-data:/var/lib/mysql
+
+volumes:
+  sigec-mysql-data:
+  storage-sigec-backend:
+networks:
+  sigec-backend-network:
+  web:
+    external: true

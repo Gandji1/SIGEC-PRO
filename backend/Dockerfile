@@ -1,44 +1,60 @@
-FROM php:8.2-fpm-alpine
+# Dockerfile for Laravel 11 / PHP 8.2 (Apache)
+FROM php:8.2-apache
 
 # Install system dependencies
-RUN apk add --no-cache \
-    nginx \
-    postgresql-dev \
-    curl \
-    git \
-    zip \
-    unzip \
-    composer \
-    supervisor
+RUN apt-get update \
+    && apt-get install -y \
+        git \
+        unzip \
+        libpq-dev \
+        libzip-dev \
+        libonig-dev \
+        libxml2-dev \
+        libpng-dev \
+        libjpeg-dev \
+        libfreetype6-dev \
+        zip \
+        netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
-RUN docker-php-ext-install \
-    pdo \
-    pdo_pgsql \
-    redis \
-    bcmath \
-    ctype \
-    fileinfo \
-    json \
-    mbstring \
-    tokenizer \
-    xml
+# Enable Apache modules
+RUN a2enmod rewrite
 
-# Configure PHP
-RUN echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/custom.ini
+# Install PHP extensions required by Laravel and your stack
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
+        pdo \
+        pdo_mysql \
+        pdo_pgsql \
+        mbstring \
+        zip \
+        exif \
+        pcntl \
+        bcmath \
+        gd
 
-WORKDIR /app
+# Copy custom php.ini if present
+COPY php.ini /usr/local/etc/php/php.ini
 
-# Copy project files
-COPY . .
+# Set workdir
+WORKDIR /var/www
 
-# Install Composer dependencies
-RUN composer install --no-interaction --optimize-autoloader
+# Copy application code
+COPY . /var/www
 
-# Set permissions
-RUN chmod -R 755 storage bootstrap/cache
+# Copy Apache vhost
+COPY docker/apache/laravel.conf /etc/apache2/sites-available/000-default.conf
 
-# Expose port
-EXPOSE 8000
+# Copy entrypoint script
+COPY docker/entrypoint.sh /usr/local/bin/laravel-entrypoint
+RUN chmod +x /usr/local/bin/laravel-entrypoint
 
-CMD ["php-fpm"]
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Install PHP dependencies (optimize for production by default)
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+EXPOSE 80
+
+ENTRYPOINT ["laravel-entrypoint"]

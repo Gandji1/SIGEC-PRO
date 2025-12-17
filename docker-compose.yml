@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  # Backend API (Laravel 11 + SQLite)
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sigec-app
+    restart: unless-stopped
+    working_dir: /var/www
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=sqlite
+    volumes:
+      # Mount source code but exclude vendor directory (already in image)
+      - ./backend:/var/www
+      - ./backend/storage:/var/www/storage
+      # Exclude these from volume mount to preserve built image
+      - /var/www/vendor
+      - /var/www/node_modules
+    ports:
+      - "8000:8000"
+    networks:
+      - sigec-network
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sigec-api.rule=Host(`api.sigec.artbenshow.com`)"
+      - "traefik.http.routers.sigec-api.entrypoints=websecure"
+      - "traefik.http.routers.sigec-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sigec-api.loadbalancer.server.port=8000"
+      - "traefik.http.docker.network=web"
+
+  # Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sigec-frontend
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      # Exclude node_modules to preserve built dependencies
+      - /app/node_modules
+    networks:
+      - sigec-network
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sigec-web.rule=Host(`sigec.artbenshow.com`)"
+      - "traefik.http.routers.sigec-web.entrypoints=websecure"
+      - "traefik.http.routers.sigec-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sigec-web.loadbalancer.server.port=5173"
+      - "traefik.http.docker.network=web"
+    command: npm run dev
+
+networks:
+  sigec-network:
+    driver: bridge
+  web:
+    external:
+      name: web

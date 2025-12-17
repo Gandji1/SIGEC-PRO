@@ -33,6 +33,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => \App\Http\Middleware\TenantResolver::class,
             'throttle.auth' => \App\Http\Middleware\RateLimitAuth::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+
+        'api/*',
+
+    ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Retourner JSON pour les erreurs d'authentification API

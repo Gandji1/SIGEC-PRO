@@ -1,61 +1,80 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
-  base: '/',
+  base: "/",
   plugins: [
     react({
       // Optimisation React - fast refresh
       fastRefresh: true,
-    })
+    }),
   ],
   server: {
-    port: 5173,
+    port: 3000,
+    cors: true, // Activer CORS pour le serveur de développement
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
+      "/api": {
+        target: "http://localhost:8000",
         changeOrigin: true,
-        rewrite: (path) => path
-      }
-    }
+        rewrite: (path) => path,
+      },
+      // Proxy pour éviter les erreurs CORS en développement
+      "/external-api": {
+        target: "https://api.sigec.artbenshow.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/external-api/, ""),
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      },
+    },
   },
   // Optimisations de performance
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'axios', 'zustand', 'lucide-react'],
-    exclude: ['recharts'], // Lazy load recharts
+    include: [
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "axios",
+      "zustand",
+      "lucide-react",
+    ],
+    exclude: ["recharts"], // Lazy load recharts
   },
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     sourcemap: false,
-    minify: 'terser',
+    minify: "terser",
     chunkSizeWarningLimit: 300,
     // Options Terser pour minification agressive
     terserOptions: {
       compress: {
         drop_console: true, // Supprimer console.log en prod
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info'],
+        pure_funcs: ["console.log", "console.info"],
       },
       mangle: true,
     },
     rollupOptions: {
       output: {
-        dir: 'dist',
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash][extname]',
+        dir: "dist",
+        entryFileNames: "assets/[name]-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash][extname]",
         // Code splitting manuel pour les vendors lourds
         manualChunks: {
           // React core - chargé en premier
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
           // Graphiques (recharts est lourd ~200kb) - lazy load
-          'vendor-charts': ['recharts'],
+          "vendor-charts": ["recharts"],
           // Utilitaires légers
-          'vendor-utils': ['axios', 'zustand'],
+          "vendor-utils": ["axios", "zustand"],
           // Icons - tree-shakable
-          'vendor-icons': ['lucide-react'],
-        }
-      }
+          "vendor-icons": ["lucide-react"],
+        },
+      },
     },
     // Compression CSS
     cssCodeSplit: true,
@@ -63,7 +82,7 @@ export default defineConfig({
   },
   // Préchargement des modules
   esbuild: {
-    legalComments: 'none',
+    legalComments: "none",
     treeShaking: true,
-  }
-})
+  },
+});
