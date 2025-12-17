@@ -84,7 +84,37 @@ export default function SubscriptionsPage() {
       fetchData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur');
+      const status = err.response?.status;
+      const errors = err.response?.data?.errors;
+      if (status === 422 && errors && typeof errors === 'object') {
+        const firstField = Object.keys(errors)[0];
+        setError(errors[firstField]?.[0] || err.response?.data?.message || 'Données invalides');
+      } else {
+        setError(err.response?.data?.message || 'Erreur');
+      }
+    }
+  };
+
+  const handleDeletePlan = async (plan) => {
+    setError('');
+    setSuccess('');
+    const ok = window.confirm(`Supprimer le plan "${plan.display_name || plan.name}" ?`);
+    if (!ok) return;
+
+    try {
+      await apiClient.delete(`/superadmin/plans/${plan.id}`);
+      setSuccess('Plan supprimé');
+      fetchData();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      const status = err.response?.status;
+      const errors = err.response?.data?.errors;
+      if (status === 422 && errors && typeof errors === 'object') {
+        const firstField = Object.keys(errors)[0];
+        setError(errors[firstField]?.[0] || err.response?.data?.message || 'Données invalides');
+      } else {
+        setError(err.response?.data?.message || 'Erreur');
+      }
     }
   };
 
@@ -215,9 +245,14 @@ export default function SubscriptionsPage() {
                     <h3 className="text-xl font-bold text-gray-900">{plan.display_name}</h3>
                     <p className="text-sm text-gray-500">{plan.name}</p>
                   </div>
-                  <button onClick={() => openEditPlan(plan)} className="text-blue-600 hover:text-blue-800">
-                    <Edit size={18} />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => openEditPlan(plan)} className="text-blue-600 hover:text-blue-800" title="Modifier">
+                      <Edit size={18} />
+                    </button>
+                    <button onClick={() => handleDeletePlan(plan)} className="text-red-600 hover:text-red-800" title="Supprimer">
+                      <X size={18} />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-3xl font-bold text-blue-600 mb-4">
                   {formatCurrency(plan.price_monthly)}<span className="text-sm text-gray-500">/mois</span>

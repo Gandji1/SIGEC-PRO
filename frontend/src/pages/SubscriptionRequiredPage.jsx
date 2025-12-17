@@ -64,7 +64,16 @@ export default function SubscriptionRequiredPage() {
       }
     } catch (err) {
       console.error('Subscription error:', err);
-      alert(err.response?.data?.message || 'Erreur lors de l\'abonnement');
+      const status = err.response?.status;
+      const errors = err.response?.data?.errors;
+
+      if (status === 422 && errors && typeof errors === 'object') {
+        const firstField = Object.keys(errors)[0];
+        const firstMessage = errors[firstField]?.[0];
+        alert(firstMessage || err.response?.data?.message || 'Données invalides');
+      } else {
+        alert(err.response?.data?.message || 'Erreur lors de l\'abonnement');
+      }
     } finally {
       setProcessing(false);
     }

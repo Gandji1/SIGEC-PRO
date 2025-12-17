@@ -14,78 +14,93 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create test tenant with Mode B (complet)
-        $tenant = Tenant::create([
-            'name' => 'Demo Business',
-            'slug' => 'demo-business',
-            'domain' => 'demo.localhost',
-            'mode_pos' => 'B',
-            'currency' => 'XOF',
-            'country' => 'Senegal',
-            'phone' => '+221 77 123 45 67',
-            'email' => 'admin@demo.local',
-            'address' => '123 Main Street, Dakar',
-            'status' => 'active',
-            'tva_rate' => 18.00,
-            'default_markup' => 30.00,
-            'stock_policy' => 'cmp',
-            'allow_credit' => false,
-            'accounting_enabled' => true,
-        ]);
+        $tenant = Tenant::updateOrCreate(
+            ['slug' => 'demo-business'],
+            [
+                'name' => 'Demo Business',
+                'domain' => 'demo.localhost',
+                'mode_pos' => 'B',
+                'currency' => 'XOF',
+                'country' => 'Senegal',
+                'phone' => '+221 77 123 45 67',
+                'email' => 'admin@demo.local',
+                'address' => '123 Main Street, Dakar',
+                'status' => 'active',
+                'business_type' => 'retail',
+                'accounting_enabled' => true,
+                'settings' => json_encode([
+                    'tva_rate' => 18.00,
+                    'default_markup' => 30.00,
+                    'stock_policy' => 'cmp',
+                    'allow_credit' => false,
+                ]),
+            ]
+        );
 
         // Create owner user (for tenant configuration)
-        User::create([
-            'tenant_id' => $tenant->id,
-            'name' => 'Owner User',
-            'email' => 'owner@demo.local',
-            'password' => Hash::make('password'),
-            'phone' => '+221 77 111 11 11',
-            'role' => 'owner',
-            'status' => 'active',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'owner@demo.local'],
+            [
+                'tenant_id' => $tenant->id,
+                'name' => 'Owner User',
+                'password' => Hash::make('password'),
+                'phone' => '+221 77 111 11 11',
+                'role' => 'owner',
+                'status' => 'active',
+            ]
+        );
 
         // Create admin user (legacy, for compatibility)
-        User::create([
-            'tenant_id' => $tenant->id,
-            'name' => 'Admin User',
-            'email' => 'admin@demo.local',
-            'password' => Hash::make('password'),
-            'phone' => '+221 77 111 11 11',
-            'role' => 'owner',
-            'status' => 'active',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'admin@demo.local'],
+            [
+                'tenant_id' => $tenant->id,
+                'name' => 'Admin User',
+                'password' => Hash::make('password'),
+                'phone' => '+221 77 111 11 11',
+                'role' => 'owner',
+                'status' => 'active',
+            ]
+        );
 
         // Create manager user
-        User::create([
-            'tenant_id' => $tenant->id,
-            'name' => 'Manager User',
-            'email' => 'manager@demo.local',
-            'password' => Hash::make('password'),
-            'phone' => '+221 77 222 22 22',
-            'role' => 'manager',
-            'status' => 'active',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'manager@demo.local'],
+            [
+                'tenant_id' => $tenant->id,
+                'name' => 'Manager User',
+                'password' => Hash::make('password'),
+                'phone' => '+221 77 222 22 22',
+                'role' => 'manager',
+                'status' => 'active',
+            ]
+        );
 
         // Create accountant user
-        User::create([
-            'tenant_id' => $tenant->id,
-            'name' => 'Accountant User',
-            'email' => 'accountant@demo.local',
-            'password' => Hash::make('password'),
-            'phone' => '+221 77 444 44 44',
-            'role' => 'accountant',
-            'status' => 'active',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'accountant@demo.local'],
+            [
+                'tenant_id' => $tenant->id,
+                'name' => 'Accountant User',
+                'password' => Hash::make('password'),
+                'phone' => '+221 77 444 44 44',
+                'role' => 'accountant',
+                'status' => 'active',
+            ]
+        );
 
         // Create warehouse user
-        User::create([
-            'tenant_id' => $tenant->id,
-            'name' => 'Warehouse User',
-            'email' => 'warehouse@demo.local',
-            'password' => Hash::make('password'),
-            'phone' => '+221 77 555 55 55',
-            'role' => 'magasinier_gros',
-            'status' => 'active',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'warehouse@demo.local'],
+            [
+                'tenant_id' => $tenant->id,
+                'name' => 'Warehouse User',
+                'password' => Hash::make('password'),
+                'phone' => '+221 77 555 55 55',
+                'role' => 'magasinier_gros',
+                'status' => 'active',
+            ]
+        );
 
         // Create sample products
         $products = [
@@ -137,25 +152,34 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($products as $productData) {
-            $product = Product::create([
-                'tenant_id' => $tenant->id,
-                ...$productData,
-                'status' => 'active',
-            ]);
+            $product = Product::updateOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'code' => $productData['code'],
+                ],
+                [
+                    ...$productData,
+                    'status' => 'active',
+                ]
+            );
 
             // Calculate margin
             $product->calculateMargin();
             $product->save();
 
             // Create stock
-            Stock::create([
-                'tenant_id' => $tenant->id,
-                'product_id' => $product->id,
-                'warehouse' => 'main',
-                'quantity' => 100,
-                'available' => 100,
-                'unit_cost' => $product->purchase_price,
-            ]);
+            Stock::updateOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'product_id' => $product->id,
+                    'warehouse' => 'main',
+                ],
+                [
+                    'quantity' => 100,
+                    'available' => 100,
+                    'unit_cost' => $product->purchase_price,
+                ]
+            );
         }
 
         $this->command->info('Database seeded successfully with test data!');
@@ -164,24 +188,28 @@ class DatabaseSeeder extends Seeder
         $this->call(RBACSeeder::class);
         
         // Create super_admin user
-        $superAdminTenant = Tenant::create([
-            'name' => 'Demo Tenant',
-            'slug' => 'demo-tenant',
-            'domain' => 'demo.sigec.local',
-            'currency' => 'XOF',
-            'status' => 'active',
-            'business_type' => 'retail',
-            'mode_pos' => 'A',
-            'accounting_enabled' => 1,
-        ]);
+        $superAdminTenant = Tenant::updateOrCreate(
+            ['slug' => 'demo-tenant'],
+            [
+                'name' => 'Demo Tenant',
+                'domain' => 'demo.sigec.local',
+                'currency' => 'XOF',
+                'status' => 'active',
+                'business_type' => 'retail',
+                'mode_pos' => 'A',
+                'accounting_enabled' => 1,
+            ]
+        );
 
-        User::create([
-            'tenant_id' => $superAdminTenant->id,
-            'name' => 'Super Admin',
-            'email' => 'super@demo.local',
-            'password' => Hash::make('demo12345'),
-            'role' => 'super_admin',
-            'status' => 'active',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'super@demo.local'],
+            [
+                'tenant_id' => $superAdminTenant->id,
+                'name' => 'Super Admin',
+                'password' => Hash::make('demo12345'),
+                'role' => 'super_admin',
+                'status' => 'active',
+            ]
+        );
     }
 }

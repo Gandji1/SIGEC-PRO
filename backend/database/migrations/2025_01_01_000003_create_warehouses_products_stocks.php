@@ -67,9 +67,14 @@ return new class extends Migration
             $table->integer('reserved')->default(0);
             $table->integer('available')->default(0);
             $table->decimal('unit_cost', 15, 2)->default(0);
+            $table->decimal('cost_average', 15, 2)->default(0);
             $table->integer('min_quantity')->default(0);
             $table->timestamp('last_counted_at')->nullable();
             $table->unsignedBigInteger('last_inventory_by')->nullable();
+            $table->timestamp('last_inventory_at')->nullable();
+            $table->integer('sdu_theorique')->nullable();
+            $table->integer('stock_physique')->nullable();
+            $table->integer('ecart')->nullable();
             $table->string('location')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();

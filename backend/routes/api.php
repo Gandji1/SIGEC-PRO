@@ -465,6 +465,7 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])->prefix('superadmin')->g
     Route::get('/plans', [\App\Http\Controllers\Api\SuperAdmin\SubscriptionController::class, 'plans']);
     Route::post('/plans', [\App\Http\Controllers\Api\SuperAdmin\SubscriptionController::class, 'createPlan']);
     Route::put('/plans/{plan}', [\App\Http\Controllers\Api\SuperAdmin\SubscriptionController::class, 'updatePlan']);
+    Route::delete('/plans/{plan}', [\App\Http\Controllers\Api\SuperAdmin\SubscriptionController::class, 'deletePlan']);
     Route::get('/subscriptions', [\App\Http\Controllers\Api\SuperAdmin\SubscriptionController::class, 'subscriptions']);
     Route::post('/subscriptions/assign', [\App\Http\Controllers\Api\SuperAdmin\SubscriptionController::class, 'assignPlan']);
     Route::get('/payments', [\App\Http\Controllers\Api\SuperAdmin\SubscriptionController::class, 'payments']);

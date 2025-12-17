@@ -87,6 +87,32 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Supprimer un plan
+     */
+    public function deletePlan(Request $request, SubscriptionPlan $plan): JsonResponse
+    {
+        $subscriptionsCount = Subscription::where('plan_id', $plan->id)->count();
+        if ($subscriptionsCount > 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Données invalides',
+                'errors' => [
+                    'plan' => ["Ce plan ne peut pas être supprimé car il est utilisé par {$subscriptionsCount} abonnement(s)."],
+                ],
+            ], 422);
+        }
+
+        $planName = $plan->display_name;
+        $plan->delete();
+        SystemLog::log("Plan supprimé: {$planName}", 'info', 'system');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Plan supprimé',
+        ]);
+    }
+
+    /**
      * Liste des abonnements
      */
     public function subscriptions(Request $request): JsonResponse

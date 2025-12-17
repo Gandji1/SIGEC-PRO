@@ -48,9 +48,10 @@ export default function ProductsPage() {
   }, [search]);
 
   const fetchProducts = useCallback(async (force = false) => {
+    const currentCachedProducts = getCache(CACHE_KEYS.PRODUCTS);
     // Si on a le cache et pas de recherche et pas de force, utiliser le cache
-    if (!force && cachedProducts && cachedProducts.length > 0 && !debouncedSearch) {
-      setProducts(cachedProducts);
+    if (!force && currentCachedProducts && currentCachedProducts.length > 0 && !debouncedSearch) {
+      setProducts(currentCachedProducts);
       setTableLoading(false);
       return;
     }
@@ -74,7 +75,7 @@ export default function ProductsPage() {
     } finally {
       setTableLoading(false);
     }
-  }, [debouncedSearch, cachedProducts, setCache]);
+  }, [debouncedSearch, cachedProducts, getCache, setCache]);
 
   useEffect(() => {
     if (!fetchedRef.current || debouncedSearch) {
@@ -116,7 +117,8 @@ export default function ProductsPage() {
         max_stock: 100,
         tax_percent: 18,
       });
-      fetchProducts();
+      invalidate(CACHE_KEYS.PRODUCTS);
+      fetchProducts(true);
     } catch (error) {
       console.error('Error saving product:', error);
       const message = error.response?.data?.message || 
@@ -143,7 +145,8 @@ export default function ProductsPage() {
     try {
       await apiClient.delete(`/products/${deleteModal.product.id}`);
       toast.success(`Produit "${deleteModal.product.name}" supprimé`);
-      fetchProducts();
+      invalidate(CACHE_KEYS.PRODUCTS);
+      fetchProducts(true);
       setDeleteModal({ open: false, product: null });
     } catch (error) {
       console.error('Error deleting product:', error);

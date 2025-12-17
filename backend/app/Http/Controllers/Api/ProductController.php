@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\AuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -34,37 +33,22 @@ class ProductController extends Controller
         $perPage = min($request->query('per_page', 50), 200);
         $page = $request->query('page', 1);
 
-        // Cache pour les requêtes sans recherche (les plus fréquentes) - TTL 5 minutes
-        $cacheKey = "products_{$tenant_id}_{$category}_{$status}_{$perPage}_{$page}";
-        
-        if (empty($search)) {
-            $products = Cache::remember($cacheKey, 300, function () use ($tenant_id, $category, $status, $perPage) {
-                $query = Product::where('tenant_id', $tenant_id);
-                
-                if ($category) $query->where('category', $category);
-                if ($status) $query->where('status', $status);
-                
-                return $query->select('id', 'code', 'name', 'category', 'selling_price', 'purchase_price', 'unit', 'status', 'image')
-                    ->orderBy('name')
-                    ->paginate($perPage);
-            });
-        } else {
-            // Pas de cache pour les recherches
-            $query = Product::where('tenant_id', $tenant_id);
-            
-            if ($category) $query->where('category', $category);
-            if ($status) $query->where('status', $status);
-            
+        $query = Product::where('tenant_id', $tenant_id);
+
+        if ($category) $query->where('category', $category);
+        if ($status) $query->where('status', $status);
+
+        if (!empty($search)) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%$search%")
-                  ->orWhere('code', 'ilike', "%$search%")
-                  ->orWhere('barcode', 'ilike', "%$search%");
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('code', 'like', "%$search%")
+                  ->orWhere('barcode', 'like', "%$search%");
             });
-            
-            $products = $query->select('id', 'code', 'name', 'category', 'selling_price', 'purchase_price', 'unit', 'status', 'image')
-                ->orderBy('name')
-                ->paginate($perPage);
         }
+
+        $products = $query->select('id', 'code', 'name', 'category', 'selling_price', 'purchase_price', 'unit', 'status', 'image')
+            ->orderBy('name')
+            ->paginate($perPage);
 
         return response()->json($products);
     }

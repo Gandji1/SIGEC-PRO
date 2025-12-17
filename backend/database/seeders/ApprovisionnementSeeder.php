@@ -109,7 +109,6 @@ class ApprovisionnementSeeder extends Seeder
                 [
                     'warehouse_id' => $warehouseGros->id,
                     'quantity' => $qtyGros,
-                    'cost_average' => $product->purchase_price,
                     'unit_cost' => $product->purchase_price,
                     'reserved' => 0,
                     'available' => $qtyGros,
@@ -127,7 +126,6 @@ class ApprovisionnementSeeder extends Seeder
                 [
                     'warehouse_id' => $warehouseDetail->id,
                     'quantity' => $qtyDetail,
-                    'cost_average' => $product->purchase_price,
                     'unit_cost' => $product->purchase_price,
                     'reserved' => 0,
                     'available' => $qtyDetail,
