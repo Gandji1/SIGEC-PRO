@@ -213,21 +213,30 @@ class ApprovisionnementController extends Controller
 
     public function createRequest(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'from_warehouse_id' => 'required|exists:warehouses,id',
-            'to_warehouse_id' => 'nullable|exists:warehouses,id',
-            'priority' => 'nullable|in:low,normal,high,urgent',
-            'needed_by_date' => 'nullable|date',
-            'notes' => 'nullable|string',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.qty_requested' => 'required|integer|min:1',
+        \Log::info('[ApprovisionnementController] createRequest called', [
+            'input' => $request->all(),
+            'user_id' => auth()->id(),
         ]);
-
+        
         try {
+            $validated = $request->validate([
+                'from_warehouse_id' => 'required|exists:warehouses,id',
+                'to_warehouse_id' => 'nullable|exists:warehouses,id',
+                'priority' => 'nullable|in:low,normal,high,urgent',
+                'needed_by_date' => 'nullable|date',
+                'notes' => 'nullable|string',
+                'items' => 'required|array|min:1',
+                'items.*.product_id' => 'required|exists:products,id',
+                'items.*.qty_requested' => 'required|integer|min:1',
+            ]);
+
             $stockRequest = $this->service->createStockRequest($validated);
             return response()->json($stockRequest, 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('[ApprovisionnementController] Validation error', ['errors' => $e->errors()]);
+            return response()->json(['error' => 'Données invalides', 'details' => $e->errors()], 422);
         } catch (\Exception $e) {
+            \Log::error('[ApprovisionnementController] Error', ['message' => $e->getMessage()]);
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }

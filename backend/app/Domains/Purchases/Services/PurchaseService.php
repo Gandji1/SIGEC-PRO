@@ -14,6 +14,7 @@ use App\Models\AccountingEntry;
 use App\Domains\Stocks\Services\StockService;
 use App\Domains\Accounting\Services\AutoPostingService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -234,26 +235,45 @@ class PurchaseService
 
     public function getPurchasesReport(string $start_date, string $end_date): array
     {
+        $start = Carbon::parse($start_date)->startOfDay();
+        $end = Carbon::parse($end_date)->endOfDay();
+
         $purchases = Purchase::where('tenant_id', auth()->guard('sanctum')->user()->tenant_id)
-            ->where('status', 'received')
-            ->whereBetween('received_at', [$start_date, $end_date])
+            ->whereIn('status', ['received', 'completed', 'partial'])
+            ->whereBetween('created_at', [$start, $end])
             ->get();
 
-        $report = [];
+        $buckets = [];
+        $totalPurchases = 0;
 
         foreach ($purchases as $purchase) {
-            if (!isset($report[$purchase->supplier_name])) {
-                $report[$purchase->supplier_name] = [
+            $key = ($purchase->received_at ?? $purchase->created_at)->format('Y-m-d');
+
+            if (!isset($buckets[$key])) {
+                $buckets[$key] = [
+                    'date' => $key,
                     'count' => 0,
                     'total' => 0,
                 ];
             }
 
-            $report[$purchase->supplier_name]['count']++;
-            $report[$purchase->supplier_name]['total'] += $purchase->total;
+            $buckets[$key]['count']++;
+            $buckets[$key]['total'] += (float) ($purchase->total ?? 0);
+            $totalPurchases += (float) ($purchase->total ?? 0);
         }
 
-        return $report;
+        $daily = array_values($buckets);
+        usort($daily, fn($a, $b) => strcmp($a['date'], $b['date']));
+
+        return [
+            'total_purchases' => $totalPurchases,
+            'purchases_count' => $purchases->count(),
+            'daily' => $daily,
+            'period' => [
+                'start_date' => $start->toDateString(),
+                'end_date' => $end->toDateString(),
+            ],
+        ];
     }
 
     private function generateReference(int $tenant_id): string

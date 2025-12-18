@@ -20,9 +20,9 @@ return new class extends Migration
             $table->foreignId('from_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
             $table->foreignId('to_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
             $table->string('reference');
-            $table->string('from_warehouse')->default('main');
-            $table->string('to_warehouse');
-            $table->enum('status', ['draft', 'confirmed', 'completed', 'cancelled'])->default('draft');
+            $table->string('from_warehouse')->nullable()->default('main');
+            $table->string('to_warehouse')->nullable();
+            $table->enum('status', ['draft', 'pending', 'approved', 'confirmed', 'completed', 'cancelled'])->default('draft');
             $table->decimal('total_items', 10, 2)->default(0);
             $table->decimal('total_value', 14, 2)->default(0);
             $table->timestamp('transferred_at')->nullable();

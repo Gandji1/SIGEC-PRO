@@ -66,8 +66,9 @@ const ROLE_PERMISSIONS = {
     // ✅ Seul à créer commandes fournisseurs (soumises au Tenant pour approbation)
     // ✅ Seul à approuver/servir/valider les ventes des serveurs
     // ✅ Gère caisse, stock, transferts
-    // ❌ Pas d'accès aux Fournisseurs dans Collaborateurs
+    // ✅ Peut VOIR les fournisseurs pour créer des commandes (lecture seule)
     'dashboard.manager', 
+    'suppliers.list', 'suppliers.view', // Lecture seule des fournisseurs pour commandes
     'purchases.list', 'purchases.create', 'purchases.receive', // Crée et réceptionne
     'sales.list', 'sales.view',
     'pos_orders.manage', 'pos_orders.approve', 'pos_orders.serve', 'pos_orders.validate', // Valide ventes serveurs

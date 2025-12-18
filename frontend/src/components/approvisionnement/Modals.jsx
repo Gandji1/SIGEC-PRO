@@ -410,7 +410,7 @@ export function ReceiveModal({ headers, purchase, onClose, onSaved }) {
   );
 }
 
-export function RequestModal({ headers, products: initialProducts = [], fromWarehouseId, toWarehouseId, onClose, onSaved }) {
+export function RequestModal({ headers, products: initialProducts = [], fromWarehouseId: initialFromId, toWarehouseId: initialToId, onClose, onSaved }) {
   const [form, setForm] = useState({
     priority: 'normal',
     needed_by_date: '',
@@ -418,20 +418,46 @@ export function RequestModal({ headers, products: initialProducts = [], fromWare
   });
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState(initialProducts);
-  const [dataLoading, setDataLoading] = useState(initialProducts.length === 0);
+  const [fromWarehouseId, setFromWarehouseId] = useState(initialFromId);
+  const [toWarehouseId, setToWarehouseId] = useState(initialToId);
+  const [dataLoading, setDataLoading] = useState(initialProducts.length === 0 || !initialFromId || !initialToId);
   
-  // Charger les produits si pas fournis
+  // Charger les produits et warehouses si pas fournis
   useEffect(() => {
-    if (products.length > 0) {
-      setDataLoading(false);
-      return;
-    }
-    
     const loadData = async () => {
       try {
-        const res = await apiClient.get('/products?per_page=100');
-        const prods = res.data?.data || res.data || [];
+        const promises = [];
+        
+        // Charger produits si nécessaire
+        if (products.length === 0) {
+          promises.push(apiClient.get('/products?per_page=100'));
+        } else {
+          promises.push(Promise.resolve({ data: products }));
+        }
+        
+        // Charger warehouses si nécessaire
+        if (!fromWarehouseId || !toWarehouseId) {
+          promises.push(apiClient.get('/warehouses'));
+        } else {
+          promises.push(Promise.resolve(null));
+        }
+        
+        const [prodRes, whRes] = await Promise.all(promises);
+        
+        // Produits
+        const prods = prodRes.data?.data || prodRes.data || [];
         if (Array.isArray(prods) && prods.length > 0) setProducts(prods);
+        
+        // Warehouses
+        if (whRes && whRes.data) {
+          const whs = whRes.data?.data || whRes.data || [];
+          const detailWh = whs.find(w => w.type === 'detail');
+          const grosWh = whs.find(w => w.type === 'gros');
+          if (detailWh && !fromWarehouseId) setFromWarehouseId(detailWh.id);
+          if (grosWh && !toWarehouseId) setToWarehouseId(grosWh.id);
+          console.log('[RequestModal] Warehouses loaded:', { detail: detailWh?.id, gros: grosWh?.id });
+        }
+        
         setDataLoading(false);
       } catch (e) {
         console.error('[RequestModal] Erreur chargement:', e);

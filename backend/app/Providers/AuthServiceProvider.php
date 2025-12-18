@@ -6,10 +6,12 @@ namespace App\Providers;
 use App\Models\Expense;
 use App\Models\Purchase;
 use App\Models\Sale;
+use App\Models\Supplier;
 use App\Models\Transfer;
 use App\Policies\ExpensePolicy;
 use App\Policies\PurchasePolicy;
 use App\Policies\SalePolicy;
+use App\Policies\SupplierPolicy;
 use App\Policies\TransferPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
@@ -24,6 +26,7 @@ class AuthServiceProvider extends ServiceProvider
         Expense::class => ExpensePolicy::class,
         Purchase::class => PurchasePolicy::class,
         Sale::class => SalePolicy::class,
+        Supplier::class => SupplierPolicy::class,
         Transfer::class => TransferPolicy::class,
     ];
 

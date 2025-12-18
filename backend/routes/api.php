@@ -126,7 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // User Management routes (Owner ONLY - Manager n'a plus accès)
-    Route::middleware('role:owner,admin')->prefix('users')->group(function () {
+    Route::middleware('role:owner,admin,super_admin')->prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index']);
         Route::post('/', [UserController::class, 'store']);
         Route::get('/assignable', [UserController::class, 'getAssignable']);
@@ -676,8 +676,8 @@ Route::middleware('auth:sanctum')->prefix('supplier-portal')->group(function () 
     Route::post('/orders/{id}/reject', [\App\Http\Controllers\Api\SupplierPortalController::class, 'rejectOrder']);
 });
 
-// Gestion accès portail fournisseur (Owner/Manager)
-Route::middleware(['auth:sanctum', 'role:owner,manager'])->prefix('suppliers')->group(function () {
+// Gestion accès portail fournisseur (Owner/Manager/Admin)
+Route::middleware(['auth:sanctum', 'role:owner,manager,admin,tenant'])->prefix('suppliers')->group(function () {
     Route::post('/{id}/enable-portal', [\App\Http\Controllers\Api\SupplierPortalController::class, 'enablePortalAccess']);
     Route::post('/{id}/disable-portal', [\App\Http\Controllers\Api\SupplierPortalController::class, 'disablePortalAccess']);
 });

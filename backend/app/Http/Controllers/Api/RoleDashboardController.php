@@ -207,7 +207,7 @@ class RoleDashboardController extends Controller
         $tenantId = $request->header('X-Tenant-ID');
 
         $transfers = Transfer::where('tenant_id', $tenantId)
-            ->whereIn('status', ['executed', 'shipped', 'in_transit'])
+            ->whereIn('status', ['completed', 'shipped', 'in_transit'])
             ->select('id', 'reference', 'status', 'created_at')
             ->limit(10)->get()
             ->map(fn($t) => ['id' => $t->id, 'reference' => $t->reference, 'type' => 'transfer_reception', 'priority' => 'normal']);

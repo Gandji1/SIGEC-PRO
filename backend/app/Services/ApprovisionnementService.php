@@ -213,6 +213,9 @@ class ApprovisionnementService
                 }
             }
 
+            // Créer entrée d'inventaire enrichi (type: Entrée)
+            $this->createInventoryEntry($purchase, $warehouseId, $receivedItems);
+
             // Verifier si tout est recu
             $allReceived = $purchase->items->every(function ($item) {
                 return $item->quantity_received >= $item->quantity_ordered;
@@ -641,8 +644,8 @@ class ApprovisionnementService
             ]);
         }
 
-        // Marquer comme exécuté
-        $transfer->status = 'executed';
+        // Marquer comme complété (exécuté)
+        $transfer->status = 'completed';
         $transfer->executed_by = $this->userId;
         $transfer->executed_at = now();
         $transfer->save();
@@ -731,7 +734,7 @@ class ApprovisionnementService
                 ]);
             }
 
-            $transfer->status = 'executed';
+            $transfer->status = 'completed';
             $transfer->executed_by = $this->userId;
             $transfer->executed_at = now();
             $transfer->save();
@@ -745,7 +748,7 @@ class ApprovisionnementService
                 'action' => 'execute',
                 'model_type' => 'transfer',
                 'model_id' => $transfer->id,
-                'payload' => ['status' => 'executed'],
+                'payload' => ['status' => 'completed'],
                 'description' => 'Transfert execute',
                 'ip_address' => request()->ip(),
             ]);
@@ -763,7 +766,7 @@ class ApprovisionnementService
                 ->with('items')
                 ->findOrFail($transferId);
 
-            if ($transfer->status !== 'executed') {
+            if ($transfer->status !== 'completed') {
                 throw new Exception('Seuls les transferts executes peuvent etre receptionnes');
             }
 
@@ -1195,5 +1198,52 @@ class ApprovisionnementService
             ->count();
 
         return "INV-$today-" . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Créer une entrée d'inventaire enrichi lors de la réception d'achat
+     * Type: Entrée (stock entrant)
+     */
+    protected function createInventoryEntry(Purchase $purchase, int $warehouseId, array $receivedItems): Inventory
+    {
+        $inventory = Inventory::create([
+            'tenant_id' => $this->tenantId,
+            'warehouse_id' => $warehouseId,
+            'user_id' => $this->userId,
+            'reference' => 'ENT-' . $purchase->reference,
+            'status' => 'validated',
+            'started_at' => now(),
+            'completed_at' => now(),
+            'notes' => 'Entrée automatique - Réception achat ' . $purchase->reference,
+            'metadata' => [
+                'type' => 'entry',
+                'source' => 'purchase_reception',
+                'purchase_id' => $purchase->id,
+                'purchase_reference' => $purchase->reference,
+                'supplier_name' => $purchase->supplier_name ?? $purchase->supplier?->name,
+            ],
+        ]);
+
+        foreach ($receivedItems as $itemData) {
+            $purchaseItem = $purchase->items->find($itemData['purchase_item_id']);
+            if (!$purchaseItem) continue;
+
+            $stock = Stock::where('tenant_id', $this->tenantId)
+                ->where('product_id', $purchaseItem->product_id)
+                ->where('warehouse_id', $warehouseId)
+                ->first();
+
+            InventoryItem::create([
+                'inventory_id' => $inventory->id,
+                'product_id' => $purchaseItem->product_id,
+                'counted_qty' => $stock?->quantity ?? $itemData['qty_received'],
+                'system_qty' => ($stock?->quantity ?? 0) - $itemData['qty_received'],
+                'variance' => $itemData['qty_received'],
+                'variance_value' => $itemData['qty_received'] * ($itemData['unit_cost'] ?? $purchaseItem->unit_price),
+                'notes' => 'Entrée: +' . $itemData['qty_received'] . ' unités',
+            ]);
+        }
+
+        return $inventory;
     }
 }

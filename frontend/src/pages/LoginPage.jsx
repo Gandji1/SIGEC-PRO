@@ -69,6 +69,9 @@ export default function LoginPage() {
         if (userRole === 'supplier') {
           console.log('[LoginPage] Supplier detected, navigating to supplier portal');
           navigate('/supplier-portal');
+        } else if (userRole === 'super_admin') {
+          console.log('[LoginPage] SuperAdmin detected, navigating to platform');
+          navigate('/platform');
         } else {
           console.log('[LoginPage] Navigating to home');
           navigate('/home');
@@ -78,8 +81,15 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error('[LoginPage] Login error:', err);
-      const errorMsg = err.response?.data?.message || err.message || 'Login failed';
-      setError(errorMsg);
+      const status = err.response?.status;
+      const errors = err.response?.data?.errors;
+      if (status === 422 && errors && typeof errors === 'object') {
+        const firstField = Object.keys(errors)[0];
+        setError(errors[firstField]?.[0] || err.response?.data?.message || err.message || 'Données invalides');
+      } else {
+        const errorMsg = err.response?.data?.message || err.message || 'Login failed';
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -108,7 +118,14 @@ export default function LoginPage() {
 
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const status = err.response?.status;
+      const errors = err.response?.data?.errors;
+      if (status === 422 && errors && typeof errors === 'object') {
+        const firstField = Object.keys(errors)[0];
+        setError(errors[firstField]?.[0] || err.response?.data?.message || 'Données invalides');
+      } else {
+        setError(err.response?.data?.message || 'Registration failed');
+      }
     } finally {
       setLoading(false);
     }

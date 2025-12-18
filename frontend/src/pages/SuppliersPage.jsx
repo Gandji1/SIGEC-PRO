@@ -47,9 +47,15 @@ export default function SuppliersPage() {
     setTableLoading(true);
     try {
       const response = await apiClient.get('/suppliers?per_page=50');
-      setSuppliers(response.data?.data || response.data || []);
+      console.log('[SuppliersPage] API response:', response.data);
+      // Handle paginated response (data.data) or direct array (data)
+      const list = Array.isArray(response.data?.data) 
+        ? response.data.data 
+        : (Array.isArray(response.data) ? response.data : []);
+      console.log('[SuppliersPage] Suppliers loaded:', list.length);
+      setSuppliers(list);
     } catch (error) {
-      console.error('Error fetching suppliers:', error);
+      console.error('[SuppliersPage] Error fetching suppliers:', error);
       setSuppliers([]);
     } finally {
       setTableLoading(false);

@@ -30,14 +30,28 @@ const CACHE_TTL = 300000; // 5 minutes pour réduire les appels API
 
 // Add tenant header and token to all requests
 apiClient.interceptors.request.use((config) => {
-  // Get tenant_id (optimisé - une seule lecture)
+  // Get tenant_id from multiple sources
   let tenantId = localStorage.getItem("tenant_id");
+  
   if (!tenantId) {
     const tenantStr = localStorage.getItem("tenant");
     if (tenantStr) {
       try {
-        tenantId = JSON.parse(tenantStr)?.id;
-        if (tenantId) localStorage.setItem("tenant_id", tenantId); // Cache pour prochaine fois
+        const tenant = JSON.parse(tenantStr);
+        tenantId = tenant?.id;
+      } catch {
+        // Silent fail
+      }
+    }
+  }
+  
+  // Also try from user object
+  if (!tenantId) {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        tenantId = user?.tenant_id;
       } catch {
         // Silent fail
       }
@@ -45,7 +59,7 @@ apiClient.interceptors.request.use((config) => {
   }
 
   if (tenantId) {
-    config.headers["X-Tenant-ID"] = tenantId;
+    config.headers["X-Tenant-ID"] = String(tenantId);
   }
 
   const token = localStorage.getItem("token");
@@ -72,6 +86,20 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const config = error.config;
+
+    if (import.meta.env.DEV && error.response?.status === 422) {
+      const url = error.response?.config?.baseURL
+        ? `${error.response.config.baseURL}${error.response.config.url}`
+        : error.response?.config?.url;
+      const data = error.response?.data;
+      console.error('[API 422] Validation error', {
+        url,
+        method: error.response?.config?.method,
+        message: data?.message,
+        errors: data?.errors,
+        data,
+      });
+    }
 
     // Retry une fois pour les erreurs réseau (pas les 4xx/5xx)
     if (!config._retry && !error.response && error.code !== "ECONNABORTED") {

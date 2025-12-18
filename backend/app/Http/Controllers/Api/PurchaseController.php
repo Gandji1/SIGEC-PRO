@@ -341,10 +341,11 @@ class PurchaseController extends Controller
 
         $this->authorize('update', $purchase);
 
-        // Seules les commandes livrées peuvent être réceptionnées
-        if ($purchase->status !== Purchase::STATUS_DELIVERED) {
+        // Les commandes soumises, confirmées ou livrées peuvent être réceptionnées
+        $allowedStatuses = [Purchase::STATUS_SUBMITTED, Purchase::STATUS_CONFIRMED, Purchase::STATUS_DELIVERED, 'submitted', 'confirmed', 'delivered'];
+        if (!in_array($purchase->status, $allowedStatuses)) {
             return response()->json(
-                ['error' => 'Seules les commandes livrées peuvent être réceptionnées. Statut actuel: ' . $purchase->status],
+                ['error' => 'Seules les commandes soumises, confirmées ou livrées peuvent être réceptionnées. Statut actuel: ' . $purchase->status],
                 422
             );
         }
@@ -418,7 +419,7 @@ class PurchaseController extends Controller
     {
         $validated = $request->validate([
             'start_date' => 'required|date',
-            'end_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
         ]);
 
         $report = $this->purchaseService->getPurchasesReport(

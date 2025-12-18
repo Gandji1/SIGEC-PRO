@@ -49,7 +49,7 @@ return new class extends Migration
             $table->foreignId('pos_id')->nullable()->constrained('pos')->onDelete('set null');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->enum('type', ['in', 'out']);
-            $table->enum('category', ['sale', 'refund', 'expense', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'adjustment', 'opening', 'closing']);
+            $table->enum('category', ['sale', 'refund', 'expense', 'deposit', 'withdrawal', 'transfer_in', 'transfer_out', 'adjustment', 'opening', 'closing', 'purchase']);
             $table->string('reference')->nullable();
             $table->string('description');
             $table->decimal('amount', 12, 2);

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { useTenantStore } from '../stores/tenantStore';
 import { CreditCard, Plus, Edit, Check, X, Calendar, Users, Package, Building2 } from 'lucide-react';
 
 export default function SubscriptionsPage() {
   const navigate = useNavigate();
+  const { user } = useTenantStore();
   const [plans, setPlans] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -16,7 +18,6 @@ export default function SubscriptionsPage() {
   const [editingPlan, setEditingPlan] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
   const [planForm, setPlanForm] = useState({
     name: '',
     display_name: '',
@@ -40,10 +41,6 @@ export default function SubscriptionsPage() {
     extend_subscription_months: 1,
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -63,6 +60,37 @@ export default function SubscriptionsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.role === 'super_admin') {
+      fetchData();
+    }
+  }, [user]);
+
+  // Vérification d'accès SuperAdmin (après tous les hooks)
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Non authentifié</h1>
+          <p className="text-gray-600">Veuillez vous connecter en tant que SuperAdmin</p>
+          <a href="/login" className="mt-4 inline-block text-blue-600 hover:underline">Se connecter</a>
+        </div>
+      </div>
+    );
+  }
+
+  if (user.role !== 'super_admin') {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Accès Refusé</h1>
+          <p className="text-gray-600">Cette page est réservée au SuperAdmin</p>
+          <p className="text-sm text-gray-500 mt-2">Votre rôle: {user.role}</p>
+        </div>
+      </div>
+    );
+  }
 
   const formatCurrency = (val) => new Intl.NumberFormat('fr-FR', { 
     style: 'currency', currency: 'XOF', maximumFractionDigits: 0 

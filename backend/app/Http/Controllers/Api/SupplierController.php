@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Supplier;
+use App\Scopes\TenantScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -12,7 +13,15 @@ class SupplierController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = auth()->guard('sanctum')->user();
-        $tenantId = $request->header('X-Tenant-ID') ?? $user?->tenant_id;
+        // PRIORITÉ: tenant_id de l'utilisateur authentifié (plus sécurisé que le header)
+        $tenantId = $user?->tenant_id ?? $request->header('X-Tenant-ID');
+        
+        \Log::info('[SupplierController] index called', [
+            'user_id' => $user?->id,
+            'user_tenant_id' => $user?->tenant_id,
+            'header_tenant_id' => $request->header('X-Tenant-ID'),
+            'resolved_tenant_id' => $tenantId,
+        ]);
         
         if (!$tenantId) {
             return response()->json(['error' => 'Tenant non trouvé', 'data' => []], 400);
@@ -22,8 +31,10 @@ class SupplierController extends Controller
         $search = $request->query('search', '');
         $status = $request->query('status', '');
 
-        $query = Supplier::where('tenant_id', $tenantId)
-            ->select(['id', 'name', 'email', 'phone', 'contact_person', 'status', 'created_at']);
+        // Désactiver le TenantScope global et filtrer manuellement pour éviter le double filtrage
+        $query = Supplier::withoutGlobalScope(TenantScope::class)
+            ->where('tenant_id', $tenantId)
+            ->select(['id', 'name', 'email', 'phone', 'contact_person', 'status', 'created_at', 'has_portal_access', 'portal_email', 'user_id', 'address', 'city', 'country', 'tax_id']);
 
         if (!empty($search)) {
             $query->where(function($q) use ($search) {
@@ -45,7 +56,13 @@ class SupplierController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = auth()->guard('sanctum')->user();
-        $tenantId = $request->header('X-Tenant-ID') ?? $user?->tenant_id;
+        // PRIORITÉ: tenant_id de l'utilisateur authentifié
+        $tenantId = $user?->tenant_id ?? $request->header('X-Tenant-ID');
+        
+        \Log::info('[SupplierController] store called', [
+            'user_id' => $user?->id,
+            'resolved_tenant_id' => $tenantId,
+        ]);
         
         if (!$tenantId) {
             return response()->json(['error' => 'Tenant non trouvé'], 400);
@@ -74,8 +91,20 @@ class SupplierController extends Controller
         return response()->json($supplier, 201);
     }
 
-    public function show(Request $request, Supplier $supplier): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
+        $user = auth()->guard('sanctum')->user();
+        $tenantId = $user?->tenant_id;
+        
+        $supplier = Supplier::withoutGlobalScope(TenantScope::class)
+            ->where('id', $id)
+            ->where('tenant_id', $tenantId)
+            ->first();
+            
+        if (!$supplier) {
+            return response()->json(['error' => 'Fournisseur non trouvé'], 404);
+        }
+        
         $this->authorize('view', $supplier);
 
         return response()->json(
@@ -83,12 +112,21 @@ class SupplierController extends Controller
         );
     }
 
-    public function update(Request $request, Supplier $supplier): JsonResponse
+    public function update(Request $request, int $id): JsonResponse
     {
-        $this->authorize('update', $supplier);
-        
         $user = auth()->guard('sanctum')->user();
-        $tenantId = $request->header('X-Tenant-ID') ?? $user?->tenant_id;
+        $tenantId = $user?->tenant_id;
+        
+        $supplier = Supplier::withoutGlobalScope(TenantScope::class)
+            ->where('id', $id)
+            ->where('tenant_id', $tenantId)
+            ->first();
+            
+        if (!$supplier) {
+            return response()->json(['error' => 'Fournisseur non trouvé'], 404);
+        }
+        
+        $this->authorize('update', $supplier);
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -110,25 +148,48 @@ class SupplierController extends Controller
         return response()->json($supplier);
     }
 
-    public function destroy(Request $request, Supplier $supplier): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
+        $user = auth()->guard('sanctum')->user();
+        $tenantId = $user?->tenant_id;
+        
+        $supplier = Supplier::withoutGlobalScope(TenantScope::class)
+            ->where('id', $id)
+            ->where('tenant_id', $tenantId)
+            ->first();
+            
+        if (!$supplier) {
+            return response()->json(['error' => 'Fournisseur non trouvé'], 404);
+        }
+        
         $this->authorize('delete', $supplier);
 
         if ($supplier->purchases()->exists()) {
             return response()->json(
-                ['error' => 'Cannot delete supplier with existing purchases'],
+                ['error' => 'Impossible de supprimer un fournisseur avec des commandes existantes'],
                 422
             );
         }
         
-        $tenantId = $supplier->tenant_id;
         $supplier->delete();
 
-        return response()->json(['message' => 'Supplier deleted']);
+        return response()->json(['message' => 'Fournisseur supprimé']);
     }
 
-    public function statistics(Request $request, Supplier $supplier): JsonResponse
+    public function statistics(Request $request, int $id): JsonResponse
     {
+        $user = auth()->guard('sanctum')->user();
+        $tenantId = $user?->tenant_id;
+        
+        $supplier = Supplier::withoutGlobalScope(TenantScope::class)
+            ->where('id', $id)
+            ->where('tenant_id', $tenantId)
+            ->first();
+            
+        if (!$supplier) {
+            return response()->json(['error' => 'Fournisseur non trouvé'], 404);
+        }
+        
         $this->authorize('view', $supplier);
 
         $totalPurchases = $supplier->purchases()

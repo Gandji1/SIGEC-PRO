@@ -12,6 +12,7 @@ use App\Models\CashRegisterSession;
 use App\Domains\Stocks\Services\StockService;
 use App\Domains\Accounting\Services\AutoPostingService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Exception;
 
 class SaleService
@@ -167,35 +168,59 @@ class SaleService
 
     public function getSalesReport(string $start_date, string $end_date, $group_by = 'daily'): array
     {
+        $start = Carbon::parse($start_date)->startOfDay();
+        $end = Carbon::parse($end_date)->endOfDay();
+
         $sales = Sale::where('tenant_id', auth()->guard('sanctum')->user()->tenant_id)
             ->where('status', 'completed')
-            ->whereBetween('completed_at', [$start_date, $end_date])
+            ->whereBetween('completed_at', [$start, $end])
             ->get();
 
-        $report = [];
+        $buckets = [];
+        $totalSales = 0;
+        $totalTax = 0;
 
         foreach ($sales as $sale) {
+            $completedAt = $sale->completed_at ?? $sale->created_at;
+
             $key = match ($group_by) {
-                'daily' => $sale->completed_at->format('Y-m-d'),
-                'weekly' => $sale->completed_at->format('Y-W'),
-                'monthly' => $sale->completed_at->format('Y-m'),
-                default => 'total',
+                'daily' => $completedAt->format('Y-m-d'),
+                'weekly' => $completedAt->format('o-\WW'),
+                'monthly' => $completedAt->format('Y-m'),
+                default => $completedAt->format('Y-m-d'),
             };
 
-            if (!isset($report[$key])) {
-                $report[$key] = [
+            if (!isset($buckets[$key])) {
+                $buckets[$key] = [
+                    'date' => $key,
                     'count' => 0,
                     'total' => 0,
                     'tax' => 0,
                 ];
             }
 
-            $report[$key]['count']++;
-            $report[$key]['total'] += $sale->total;
-            $report[$key]['tax'] += $sale->tax_amount;
+            $buckets[$key]['count']++;
+            $buckets[$key]['total'] += (float) ($sale->total ?? 0);
+            $buckets[$key]['tax'] += (float) ($sale->tax_amount ?? 0);
+
+            $totalSales += (float) ($sale->total ?? 0);
+            $totalTax += (float) ($sale->tax_amount ?? 0);
         }
 
-        return $report;
+        $daily = array_values($buckets);
+        usort($daily, fn($a, $b) => strcmp($a['date'], $b['date']));
+
+        return [
+            'total_sales' => $totalSales,
+            'sales_count' => $sales->count(),
+            'total_tax' => $totalTax,
+            'daily' => $daily,
+            'period' => [
+                'start_date' => $start->toDateString(),
+                'end_date' => $end->toDateString(),
+                'group_by' => $group_by,
+            ],
+        ];
     }
 
     public function getDailySales(string $date): float

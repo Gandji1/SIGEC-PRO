@@ -24,8 +24,9 @@ class TransferPolicy
 
     public function update(User $user, Transfer $transfer): bool
     {
+        if ($user->role === 'super_admin') return true;
         return $user->tenant_id === $transfer->tenant_id &&
-            in_array($user->role, ['owner', 'admin', 'manager', 'magasinier_gros']);
+            in_array($user->role, ['owner', 'admin', 'manager', 'gerant', 'magasinier_gros']);
     }
 
     public function delete(User $user, Transfer $transfer): bool

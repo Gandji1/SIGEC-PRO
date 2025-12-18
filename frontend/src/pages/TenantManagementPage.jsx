@@ -13,6 +13,10 @@ export default function TenantManagementPage() {
     phone: '',
     country: 'BJ',
     currency: 'XOF',
+    business_type: 'retail',
+    owner_name: '',
+    owner_email: '',
+    owner_password: 'password123',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -26,18 +30,20 @@ export default function TenantManagementPage() {
   const fetchTenants = async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/tenants');
-      const list = res.data?.data || [];
-      setTenants(list.map(t => ({
+      const res = await apiClient.get('/superadmin/tenants');
+      // L'API retourne une réponse paginée avec data dans res.data.data
+      const list = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+      setTenants(list.filter(t => t.slug !== 'system-admin').map(t => ({
         id: t.id,
         name: t.name,
         email: t.email || '-',
         status: t.status || 'active',
-        users: t.users?.length || 0,
-        plan: t.plan || 'starter'
+        users: t.users_count || t.users?.length || 0,
+        plan: t.plan_id ? `Plan #${t.plan_id}` : 'Aucun'
       })));
       setError('');
     } catch (err) {
+      console.error('Fetch tenants error:', err);
       setError(err.response?.data?.message || 'Erreur lors du chargement des tenants');
       setTenants([]);
     } finally {
@@ -52,11 +58,16 @@ export default function TenantManagementPage() {
     try {
       const payload = {
         name: formData.name.trim(),
-        slug: formData.name.trim().toLowerCase().replace(/\s+/g, '-'),
-        domain: formData.name.trim().toLowerCase().replace(/\s+/g, '-') + '.sigec.local',
-        business_type: 'retail'
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        business_type: formData.business_type,
+        country: formData.country,
+        currency: formData.currency,
+        owner_name: formData.owner_name.trim() || formData.name.trim() + ' Owner',
+        owner_email: formData.owner_email.trim(),
+        owner_password: formData.owner_password || 'password123'
       };
-      const res = await apiClient.post('/tenants', payload);
+      const res = await apiClient.post('/superadmin/tenants', payload);
       if (res.data?.success) {
         setSuccess(`✅ Tenant créé: ${res.data.data.name}`);
         setShowModal(false);
@@ -66,6 +77,10 @@ export default function TenantManagementPage() {
           phone: '',
           country: 'BJ',
           currency: 'XOF',
+          business_type: 'retail',
+          owner_name: '',
+          owner_email: '',
+          owner_password: 'password123',
         });
         fetchTenants();
         setTimeout(() => setSuccess(''), 4000);
@@ -77,12 +92,25 @@ export default function TenantManagementPage() {
     }
   };
 
-  if (user?.role !== 'super_admin') {
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Non authentifié</h1>
+          <p className="text-gray-600">Veuillez vous connecter en tant que SuperAdmin</p>
+          <a href="/login" className="mt-4 inline-block text-blue-600 hover:underline">Se connecter</a>
+        </div>
+      </div>
+    );
+  }
+
+  if (user.role !== 'super_admin') {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-2">Accès Refusé</h1>
-          <p className="text-gray-600">Vous n'avez pas les permissions nécessaires</p>
+          <p className="text-gray-600">Cette page est réservée au SuperAdmin</p>
+          <p className="text-sm text-gray-500 mt-2">Votre rôle: {user.role}</p>
         </div>
       </div>
     );
@@ -249,6 +277,50 @@ export default function TenantManagementPage() {
                     <option value="EUR">EUR (€)</option>
                     <option value="USD">USD ($)</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium text-gray-800 mb-3">Propriétaire du Tenant</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nom du propriétaire
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.owner_name}
+                      onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                      placeholder="Nom complet"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email du propriétaire
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.owner_email}
+                      onChange={(e) => setFormData({ ...formData, owner_email: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                      placeholder="email@exemple.com"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mot de passe
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.owner_password}
+                      onChange={(e) => setFormData({ ...formData, owner_password: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                      placeholder="Mot de passe initial"
+                    />
+                  </div>
                 </div>
               </div>
 

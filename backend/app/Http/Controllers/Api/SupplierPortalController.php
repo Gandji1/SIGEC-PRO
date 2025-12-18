@@ -123,13 +123,19 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        // Trouver le fournisseur lié par user_id ou par email
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        // Trouver le fournisseur lié par user_id (priorité absolue)
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)
+            ->first();
         
-        // Fallback: chercher par email si pas de liaison directe
-        if (!$supplier) {
-            $supplier = Supplier::where('portal_email', $user->email)
-                ->orWhere('email', $user->email)
+        // Fallback: chercher par email dans le tenant de l'utilisateur
+        if (!$supplier && $user->tenant_id) {
+            $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+                ->where('tenant_id', $user->tenant_id)
+                ->where(function($q) use ($user) {
+                    $q->where('portal_email', $user->email)
+                      ->orWhere('email', $user->email);
+                })
                 ->first();
             
             // Lier le fournisseur à l'utilisateur si trouvé
@@ -209,7 +215,8 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)->first();
         
         if (!$supplier) {
             return response()->json(['message' => 'Fournisseur non trouvé'], 404);
@@ -249,7 +256,8 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)->first();
         
         // Vérifier que la commande est visible pour le fournisseur (approuvée par tenant)
         $order = Purchase::where('supplier_id', $supplier->id)
@@ -279,7 +287,8 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)->first();
         
         $order = Purchase::where('supplier_id', $supplier->id)->findOrFail($id);
 
@@ -320,7 +329,8 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)->first();
         
         $order = Purchase::where('supplier_id', $supplier->id)->findOrFail($id);
 
@@ -360,7 +370,8 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)->first();
         
         $order = Purchase::where('supplier_id', $supplier->id)->findOrFail($id);
 
@@ -401,7 +412,8 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)->first();
         
         if (!$supplier) {
             return response()->json(['message' => 'Fournisseur non trouvé'], 404);
@@ -464,7 +476,8 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)->first();
         
         if (!$supplier) {
             return response()->json(['data' => [], 'stats' => []]);
@@ -515,7 +528,8 @@ class SupplierPortalController extends Controller
             return response()->json(['message' => 'Accès réservé aux fournisseurs'], 403);
         }
 
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        $supplier = Supplier::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('user_id', $user->id)->first();
         
         $order = Purchase::where('supplier_id', $supplier->id)->findOrFail($id);
 

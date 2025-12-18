@@ -52,7 +52,7 @@ class User extends Authenticatable
     /**
      * Rôles autorisés à créer des ventes/commandes POS
      */
-    const SALES_ALLOWED_ROLES = ['pos_server', 'serveur', 'caissier'];
+    const SALES_ALLOWED_ROLES = ['pos_server', 'serveur', 'caissier', 'super_admin', 'owner', 'admin', 'manager', 'gerant'];
 
     /**
      * Rôles de gestion (ne peuvent pas créer de ventes)

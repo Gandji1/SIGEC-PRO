@@ -291,14 +291,14 @@ export default function App() {
           }
         />
 
-        {/* Super Admin Routes */}
-        <Route path="/platform" element={<PrivateRoute><SuperAdminDashboard /></PrivateRoute>} />
-        <Route path="/system-logs" element={<PrivateRoute><SystemLogsPage /></PrivateRoute>} />
-        <Route path="/subscriptions" element={<PrivateRoute><SubscriptionsPage /></PrivateRoute>} />
-        <Route path="/platform-settings" element={<PrivateRoute><PlatformSettingsPage /></PrivateRoute>} />
-        <Route path="/monitoring" element={<PrivateRoute><MonitoringPage /></PrivateRoute>} />
-        <Route path="/payment-gateways" element={<PrivateRoute><PaymentGatewaysPage /></PrivateRoute>} />
-        <Route path="/superadmin-accounting" element={<PrivateRoute><SuperAdminAccountingPage /></PrivateRoute>} />
+        {/* Super Admin Routes - skipSubscriptionCheck car le SuperAdmin n'a pas d'abonnement */}
+        <Route path="/platform" element={<PrivateRoute skipSubscriptionCheck><SuperAdminDashboard /></PrivateRoute>} />
+        <Route path="/system-logs" element={<PrivateRoute skipSubscriptionCheck><SystemLogsPage /></PrivateRoute>} />
+        <Route path="/subscriptions" element={<PrivateRoute skipSubscriptionCheck><SubscriptionsPage /></PrivateRoute>} />
+        <Route path="/platform-settings" element={<PrivateRoute skipSubscriptionCheck><PlatformSettingsPage /></PrivateRoute>} />
+        <Route path="/monitoring" element={<PrivateRoute skipSubscriptionCheck><MonitoringPage /></PrivateRoute>} />
+        <Route path="/payment-gateways" element={<PrivateRoute skipSubscriptionCheck><PaymentGatewaysPage /></PrivateRoute>} />
+        <Route path="/superadmin-accounting" element={<PrivateRoute skipSubscriptionCheck><SuperAdminAccountingPage /></PrivateRoute>} />
 
         {/* Configuration Routes */}
         <Route path="/pos-mode" element={<PrivateRoute><POSModePage /></PrivateRoute>} />

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
             $table->foreignId('promotion_id')->nullable();
             $table->string('promotion_code')->nullable();
@@ -113,15 +114,33 @@ return new class extends Migration
             $table->decimal('total', 15, 2)->default(0);
             $table->decimal('amount_paid', 15, 2)->default(0);
             $table->string('payment_method')->default('transfer');
-            $table->enum('status', ['draft', 'confirmed', 'received', 'cancelled'])->default('draft');
+            $table->enum('status', ['draft', 'pending_approval', 'submitted', 'confirmed', 'shipped', 'delivered', 'received', 'paid', 'cancelled'])->default('draft');
             $table->enum('workflow_status', ['draft', 'pending_approval', 'approved', 'rejected', 'ordered', 'received', 'completed'])->default('draft');
+            // Workflow users
+            $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('approved_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            // Workflow timestamps
             $table->timestamp('approved_at')->nullable();
+            $table->timestamp('submitted_at')->nullable();
+            $table->timestamp('confirmed_at')->nullable();
+            $table->timestamp('shipped_at')->nullable();
+            $table->timestamp('delivered_at')->nullable();
+            $table->timestamp('received_at')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            // Payment validation
             $table->boolean('payment_validated')->default(false);
             $table->foreignId('payment_validated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('payment_validated_at')->nullable();
+            $table->boolean('payment_validated_by_supplier')->default(false);
+            // Dates
             $table->date('expected_date')->nullable();
+            $table->date('expected_delivery_date')->nullable();
             $table->date('received_date')->nullable();
+            // Supplier info
+            $table->text('supplier_notes')->nullable();
+            $table->string('tracking_number')->nullable();
+            $table->string('delivery_proof')->nullable();
             $table->text('notes')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
@@ -138,13 +157,17 @@ return new class extends Migration
             $table->foreignId('purchase_id')->constrained('purchases')->cascadeOnDelete();
             $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
             $table->integer('quantity_ordered');
+            $table->integer('quantity')->nullable();
             $table->integer('quantity_received')->default(0);
             $table->decimal('unit_price', 15, 2);
-            $table->decimal('line_subtotal', 15, 2);
+            $table->decimal('subtotal', 15, 2)->default(0);
+            $table->decimal('line_subtotal', 15, 2)->default(0);
             $table->decimal('tax_percent', 5, 2)->default(0);
             $table->decimal('tax_amount', 15, 2)->default(0);
-            $table->decimal('line_total', 15, 2);
+            $table->decimal('total', 15, 2)->default(0);
+            $table->decimal('line_total', 15, 2)->default(0);
             $table->string('unit')->default('pcs');
+            $table->timestamp('received_at')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->index(['tenant_id', 'purchase_id']);

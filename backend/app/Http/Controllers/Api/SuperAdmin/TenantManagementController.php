@@ -135,9 +135,14 @@ class TenantManagementController extends Controller
                 'role' => 'owner',
             ]);
 
-            // Créer l'abonnement (trial par défaut)
-            $plan = SubscriptionPlan::find($validated['plan_id']) 
-                ?? SubscriptionPlan::where('name', 'starter')->first();
+            // Créer l'abonnement si un plan est spécifié ou existe
+            $plan = null;
+            if (!empty($validated['plan_id'])) {
+                $plan = SubscriptionPlan::find($validated['plan_id']);
+            }
+            if (!$plan) {
+                $plan = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->first();
+            }
 
             if ($plan) {
                 Subscription::create([
@@ -145,12 +150,14 @@ class TenantManagementController extends Controller
                     'plan_id' => $plan->id,
                     'status' => 'trial',
                     'starts_at' => now(),
-                    'trial_ends_at' => now()->addDays($plan->trial_days),
-                    'ends_at' => now()->addDays($plan->trial_days),
+                    'trial_ends_at' => now()->addDays($plan->trial_days ?? 14),
+                    'ends_at' => now()->addDays($plan->trial_days ?? 14),
                 ]);
 
                 $tenant->update(['plan_id' => $plan->id]);
             }
+            // Si aucun plan n'existe, le tenant est créé sans abonnement
+            // Le SuperAdmin devra d'abord créer un plan puis l'assigner
 
             // Activer les modules de base
             $coreModules = Module::where('is_core', true)->get();

@@ -161,8 +161,54 @@ export default function ReportsPage() {
   };
 
   const formatCurrency = (val) => new Intl.NumberFormat('fr-FR', { 
-    style: 'currency', currency: 'XAF', maximumFractionDigits: 0 
+    style: 'currency', currency: 'XOF', maximumFractionDigits: 0 
   }).format(val || 0);
+
+  const renderPurchasesReport = () => {
+    if (!reportData) return null;
+
+    const purchasesByDay = reportData.daily || [];
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Achats"
+            value={formatCurrency(reportData.total_purchases)}
+            icon={ShoppingCart}
+            color="bg-blue-500"
+          />
+          <StatCard
+            title="Nombre Achats"
+            value={reportData.purchases_count || '0'}
+            icon={TrendingUp}
+            color="bg-green-500"
+          />
+          <StatCard
+            title="Panier Moyen"
+            value={formatCurrency((reportData.total_purchases || 0) / (reportData.purchases_count || 1))}
+            icon={DollarSign}
+            color="bg-purple-500"
+          />
+          <StatCard
+            title="Période"
+            value={`${dateRange.startDate} → ${dateRange.endDate}`}
+            icon={Calendar}
+            color="bg-orange-500"
+          />
+        </div>
+
+        {purchasesByDay.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📈 Évolution des Achats</h3>
+            <Suspense fallback={<ChartSkeleton />}>
+              <LazyCharts data={purchasesByDay} type="bar" />
+            </Suspense>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderCashReport = () => {
     if (!reportData?.data) return (
@@ -458,6 +504,8 @@ export default function ReportsPage() {
         </div>
       ) : reportType === 'sales' ? (
         renderSalesReport()
+      ) : reportType === 'purchases' ? (
+        renderPurchasesReport()
       ) : reportType === 'accounting' ? (
         renderAccountingReport()
       ) : reportType === 'cash' ? (

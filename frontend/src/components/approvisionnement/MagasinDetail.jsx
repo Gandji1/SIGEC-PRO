@@ -162,7 +162,7 @@ export default function MagasinDetail({ headers, warehouse, grosWarehouse, userR
     }
   };
 
-  const pendingTransfers = useMemo(() => transfers.filter(t => ['executed', 'received'].includes(t.status)), [transfers]);
+  const pendingTransfers = useMemo(() => transfers.filter(t => ['completed', 'received'].includes(t.status)), [transfers]);
   const pendingOrders = useMemo(() => orders.filter(o => ['pending', 'preparing', 'paid'].includes(o.status)), [orders]);
 
   // RENDU INSTANTANÉ - Pas de loading global
@@ -251,7 +251,7 @@ const DashboardSection = memo(({ requests, pendingTransfers, pendingOrders, rece
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge status={t.status} />
-                {canEdit && t.status === 'executed' && <button onClick={() => receiveTransfer(t.id)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">Réceptionner</button>}
+                {canEdit && t.status === 'completed' && <button onClick={() => receiveTransfer(t.id)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">Réceptionner</button>}
                 {canEdit && t.status === 'received' && <button onClick={() => validateTransfer(t.id)} className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200">Valider</button>}
               </div>
             </div>
@@ -375,7 +375,7 @@ function TransfersSection({ transfers, receiveTransfer, validateTransfer, canEdi
                 {canEdit && (
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      {t.status === 'executed' && (
+                      {t.status === 'completed' && (
                         <button onClick={() => receiveTransfer(t.id)} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
                           📥 Réceptionner
                         </button>

@@ -41,6 +41,8 @@ class TransferService
         return DB::transaction(function () use ($data, $tenantId, $userId) {
             $transfer = Transfer::create([
                 'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'reference' => 'TRF-' . date('Ymd') . '-' . str_pad(Transfer::where('tenant_id', $tenantId)->count() + 1, 4, '0', STR_PAD_LEFT),
                 'from_warehouse_id' => $data['from_warehouse_id'],
                 'to_warehouse_id' => $data['to_warehouse_id'],
                 'status' => 'pending',
@@ -51,6 +53,7 @@ class TransferService
             // Ajouter les items
             foreach ($data['items'] as $item) {
                 TransferItem::create([
+                    'tenant_id' => $tenantId,
                     'transfer_id' => $transfer->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
@@ -112,13 +115,15 @@ class TransferService
                 $fromStock->save();
 
                 // Augmentation du stock destination
+                $toWarehouse = Warehouse::find($transfer->to_warehouse_id);
                 $toStock = Stock::updateOrCreate(
                     [
                         'tenant_id' => $transfer->tenant_id,
                         'product_id' => $item->product_id,
-                        'warehouse_id' => $transfer->to_warehouse_id,
+                        'warehouse' => $toWarehouse->code ?? 'main',
                     ],
                     [
+                        'warehouse_id' => $transfer->to_warehouse_id,
                         'quantity' => Stock::where('tenant_id', $transfer->tenant_id)
                             ->where('product_id', $item->product_id)
                             ->where('warehouse_id', $transfer->to_warehouse_id)
@@ -176,7 +181,7 @@ class TransferService
      */
     public function cancelTransfer(Transfer $transfer): Transfer
     {
-        if (in_array($transfer->status, ['approved', 'executed'])) {
+        if (in_array($transfer->status, ['approved', 'completed'])) {
             throw new Exception("Impossible d'annuler un transfert déjà exécuté");
         }
 
