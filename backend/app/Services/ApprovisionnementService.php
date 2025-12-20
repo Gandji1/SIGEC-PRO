@@ -1045,7 +1045,7 @@ class ApprovisionnementService
         // Cache 5 minutes pour performance
         $cacheKey = "gros_dashboard_{$this->tenantId}_{$warehouseId}";
         
-        return Cache::remember($cacheKey, 300, function () use ($warehouseId, $from, $to) {
+        return Cache::remember($cacheKey, 10, function () use ($warehouseId, $from, $to) {
             // Requête optimisée - une seule requête pour les stocks
             $stockStats = Stock::where('tenant_id', $this->tenantId)
                 ->where('warehouse_id', $warehouseId)
@@ -1090,7 +1090,7 @@ class ApprovisionnementService
         // Cache 5 minutes pour performance
         $cacheKey = "detail_dashboard_{$this->tenantId}_{$warehouseId}";
         
-        return Cache::remember($cacheKey, 300, function () use ($warehouseId, $from, $to) {
+        return Cache::remember($cacheKey, 10, function () use ($warehouseId, $from, $to) {
             // Requête optimisée - une seule requête pour les stocks
             $stockStats = Stock::where('tenant_id', $this->tenantId)
                 ->where('warehouse_id', $warehouseId)
