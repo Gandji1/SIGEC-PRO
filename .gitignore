@@ -19,3 +19,4 @@ storage/redis/
 .next/
 .vercel/
 backend/storage/framework/views
+backend/vendor

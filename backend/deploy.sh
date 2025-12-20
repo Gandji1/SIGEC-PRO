@@ -18,15 +18,16 @@ EXCLUDES=(
   "--exclude storage/framework/sessions"
   "--exclude storage/framework/views"
   "--exclude frontend/node_modules"
+  "--exclude database/database.sqlite"
 )
 
 
 
 echo "Syncing project to ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}..."
-rsync -avz ${EXCLUDES[*]} ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
+rsync -avz ${EXCLUDES[*]} --delete ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
 echo "Skipping container rebuild. To rebuild containers, run with 'prod' parameter."
 ssh "${REMOTE_USER}@${REMOTE_HOST}" bash -lc "\
   set -euo pipefail && \
   cd '${REMOTE_DIR}' && \
-  docker compose up -d --build --force-recreate --remove-orphans"
+  docker compose up -d --force-recreate --remove-orphans"
 

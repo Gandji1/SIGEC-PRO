@@ -38,7 +38,7 @@ class DatabaseSeeder extends Seeder
                 'business_type' => 'other',
                 'mode_pos' => 'A',
                 'accounting_enabled' => false,
-                'subscription_expires_at' => now()->addYears(100), // Jamais expire
+                'subscription_expires_at' => now()->addYears(10), // Jamais expire
             ]
         );
 

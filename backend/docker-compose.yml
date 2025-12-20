@@ -16,7 +16,6 @@ services:
 
     volumes:
       - storage-sigec-backend:/var/www/storage
-      - ./database/database.sqlite:/var/www/database/database.sqlite
     depends_on:
       - mysql
     networks:
@@ -42,10 +41,10 @@ services:
       MYSQL_USER: ${DB_USERNAME:-sigec}
       MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
     volumes:
-      - sigec-mysql-data:/var/lib/mysql
+      - sigec-mysql-database:/var/lib/mysql
 
 volumes:
-  sigec-mysql-data:
+  sigec-mysql-database:
   storage-sigec-backend:
 networks:
   sigec-backend-network:
