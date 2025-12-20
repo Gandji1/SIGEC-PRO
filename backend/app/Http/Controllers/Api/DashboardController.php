@@ -29,9 +29,7 @@ class DashboardController extends Controller
             $cacheKey = "dashboard_stats_{$tenantId}_" . now()->format('Y-m-d-H-i');
             
             // Cache de 30 secondes - équilibre entre fraîcheur et performance
-            $kpis = Cache::remember($cacheKey, 30, function () {
-                return $this->dashboardService->getTodayKPIs();
-            });
+            $kpis = $this->dashboardService->getTodayKPIs();
 
             return response()->json([
                 'status' => 'success',
@@ -98,7 +96,6 @@ class DashboardController extends Controller
             $tenantId = auth()->user()->tenant_id;
             $cacheKey = "manager_stats_{$tenantId}_" . now()->format('Y-m-d-H-i');
             
-            $stats = Cache::remember($cacheKey, 30, function () use ($tenantId) {
                 // Ventes aujourd'hui
                 $todaySales = \DB::table('sales')
                     ->where('tenant_id', $tenantId)
@@ -170,7 +167,7 @@ class DashboardController extends Controller
                     ->limit(5)
                     ->get();
 
-                return [
+                $stats = [
                     'todaySales' => $todaySales->count ?? 0,
                     'todaySalesAmount' => (float) ($todaySales->total ?? 0),
                     'pendingTransfers' => $pendingTransfers,
@@ -180,7 +177,7 @@ class DashboardController extends Controller
                     'topProducts' => $topProducts,
                     'lowStockProducts' => $lowStockProducts,
                 ];
-            });
+            
 
             return response()->json(['success' => true, 'data' => $stats]);
         } catch (\Exception $e) {
@@ -211,8 +208,7 @@ class DashboardController extends Controller
             $tenantId = auth()->user()->tenant_id;
             $cacheKey = "last7days_{$tenantId}_" . now()->format('Y-m-d-H-i');
             
-            $data = Cache::remember($cacheKey, 30, function () use ($tenantId) {
-                // Utiliser pos_orders pour les ventes POS
+               // Utiliser pos_orders pour les ventes POS
                 $salesTrend = \DB::table('pos_orders')
                     ->where('tenant_id', $tenantId)
                     ->where(function($q) {
@@ -238,14 +234,14 @@ class DashboardController extends Controller
                     $counts[] = $dayData->count ?? 0;
                 }
 
-                return [
+                $data = [
                     'days' => $days,
                     'totals' => $totals,
                     'counts' => $counts,
                     'total_revenue' => array_sum($totals),
                     'total_count' => array_sum($counts),
                 ];
-            });
+            
 
             return response()->json(['success' => true, 'data' => $data]);
         } catch (\Exception $e) {

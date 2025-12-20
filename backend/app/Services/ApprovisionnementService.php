@@ -1045,9 +1045,7 @@ class ApprovisionnementService
         // Cache 5 minutes pour performance
         $cacheKey = "gros_dashboard_{$this->tenantId}_{$warehouseId}";
         
-        return Cache::remember($cacheKey, 10, function () use ($warehouseId, $from, $to) {
-            // Requête optimisée - une seule requête pour les stocks
-            $stockStats = Stock::where('tenant_id', $this->tenantId)
+          $stockStats = Stock::where('tenant_id', $this->tenantId)
                 ->where('warehouse_id', $warehouseId)
                 ->selectRaw('SUM(quantity * cost_average) as total_value, COUNT(CASE WHEN quantity < 10 THEN 1 END) as low_count, COUNT(*) as total_products')
                 ->first();
@@ -1077,7 +1075,7 @@ class ApprovisionnementService
                 'pending_requests_count' => $pendingRequests,
                 'period' => ['from' => $from, 'to' => $to],
             ];
-        });
+       
     }
 
     public function getDetailDashboard(string $from = null, string $to = null): array
@@ -1090,9 +1088,7 @@ class ApprovisionnementService
         // Cache 5 minutes pour performance
         $cacheKey = "detail_dashboard_{$this->tenantId}_{$warehouseId}";
         
-        return Cache::remember($cacheKey, 10, function () use ($warehouseId, $from, $to) {
-            // Requête optimisée - une seule requête pour les stocks
-            $stockStats = Stock::where('tenant_id', $this->tenantId)
+         $stockStats = Stock::where('tenant_id', $this->tenantId)
                 ->where('warehouse_id', $warehouseId)
                 ->selectRaw('SUM(quantity * cost_average) as total_value, SUM(available) as total_available, COUNT(CASE WHEN quantity < 10 THEN 1 END) as low_count')
                 ->first();
@@ -1123,7 +1119,7 @@ class ApprovisionnementService
                 'sales_today' => $salesToday,
                 'period' => ['from' => $from, 'to' => $to],
             ];
-        });
+       
     }
 
     // ========================================

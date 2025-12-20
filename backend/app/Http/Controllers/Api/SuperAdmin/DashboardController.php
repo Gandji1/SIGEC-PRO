@@ -21,9 +21,7 @@ class DashboardController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $stats = Cache::remember('superadmin_dashboard', 60, function () {
-            return $this->computeStats();
-        });
+        $stats = $this->computeStats();
 
         return response()->json(['data' => $stats]);
     }

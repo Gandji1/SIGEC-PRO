@@ -45,7 +45,7 @@ class PosOrderController extends Controller
         $limit = min($request->get('limit', 50), 200);
 
         $query = PosOrder::where('tenant_id', $tenantId)
-            ->select(['id', 'reference', 'pos_id', 'table_id', 'table_number', 'customer_id', 'status', 'preparation_status', 'payment_status', 'payment_method', 'subtotal', 'total', 'created_by', 'served_by', 'created_at', 'validated_at'])
+            ->select(['id', 'reference', 'pos_id', 'table_number', 'customer_id', 'status', 'preparation_status', 'payment_status', 'payment_method', 'subtotal', 'total', 'created_by', 'served_by', 'created_at', 'validated_at'])
             ->with([
                 'items:id,pos_order_id,product_id,quantity_ordered,quantity_served,unit_price,line_total',
                 'items.product:id,name,code,unit',

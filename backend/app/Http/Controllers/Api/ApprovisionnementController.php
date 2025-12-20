@@ -193,7 +193,7 @@ class ApprovisionnementController extends Controller
         // Cache pour les listes fréquentes
         $cacheKey = "stock_requests_{$tenantId}_{$status}_{$fromWarehouseId}_{$perPage}_{$page}";
         
-        $requests = Cache::remember($cacheKey, 300, function () use ($tenantId, $perPage, $status, $fromWarehouseId) {
+      
             $query = StockRequest::where('tenant_id', $tenantId)
                 ->select(['id', 'reference', 'status', 'priority', 'from_warehouse_id', 'to_warehouse_id', 'requested_by', 'needed_by_date', 'created_at']);
 
@@ -205,8 +205,8 @@ class ApprovisionnementController extends Controller
                 $query->where('from_warehouse_id', $fromWarehouseId);
             }
 
-            return $query->orderBy('created_at', 'desc')->paginate($perPage);
-        });
+             $requests = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
 
         return response()->json($requests);
     }
@@ -305,8 +305,7 @@ class ApprovisionnementController extends Controller
         // Cache pour les listes fréquentes
         $cacheKey = "transfers_{$tenantId}_{$status}_{$fromWarehouseId}_{$toWarehouseId}_{$perPage}_{$page}";
         
-        $transfers = Cache::remember($cacheKey, 300, function () use ($tenantId, $perPage, $status, $fromWarehouseId, $toWarehouseId) {
-            $query = Transfer::where('tenant_id', $tenantId)
+           $query = Transfer::where('tenant_id', $tenantId)
                 ->select(['id', 'reference', 'status', 'from_warehouse_id', 'to_warehouse_id', 'total_items', 'created_at']);
 
             if ($status) {
@@ -321,8 +320,8 @@ class ApprovisionnementController extends Controller
                 $query->where('to_warehouse_id', $toWarehouseId);
             }
 
-            return $query->orderBy('created_at', 'desc')->paginate($perPage);
-        });
+            $transfers= $query->orderBy('created_at', 'desc')->paginate($perPage);
+        
 
         return response()->json($transfers);
     }
@@ -388,7 +387,7 @@ class ApprovisionnementController extends Controller
         
         $cacheKey = "inventories_{$tenantId}_{$warehouseId}_{$status}_{$page}";
         
-        $inventories = Cache::remember($cacheKey, 300, function () use ($tenantId, $warehouseId, $status) {
+        
             $query = Inventory::where('tenant_id', $tenantId)
                 ->select(['id', 'reference', 'status', 'warehouse_id', 'created_by', 'created_at']);
 
@@ -400,8 +399,8 @@ class ApprovisionnementController extends Controller
                 $query->where('status', $status);
             }
 
-            return $query->orderBy('created_at', 'desc')->paginate(20);
-        });
+            $inventories = $query->orderBy('created_at', 'desc')->paginate(20);
+        
 
         return response()->json($inventories);
     }
@@ -450,7 +449,6 @@ class ApprovisionnementController extends Controller
         
         $cacheKey = "movements_{$tenantId}_{$productId}_{$warehouseId}_{$type}_{$page}";
         
-        $movements = Cache::remember($cacheKey, 300, function () use ($tenantId, $productId, $warehouseId, $type, $request) {
             $query = StockMovement::where('tenant_id', $tenantId)
                 ->select(['id', 'type', 'product_id', 'quantity', 'from_warehouse_id', 'to_warehouse_id', 'reference', 'created_at']);
 
@@ -473,8 +471,8 @@ class ApprovisionnementController extends Controller
                 $query->whereBetween('created_at', [$request->query('from'), $request->query('to')]);
             }
 
-            return $query->orderBy('created_at', 'desc')->paginate(50);
-        });
+            $movements =  $query->orderBy('created_at', 'desc')->paginate(50);
+        
 
         return response()->json($movements);
     }
@@ -493,7 +491,6 @@ class ApprovisionnementController extends Controller
         
         $cacheKey = "pos_orders_{$tenantId}_{$status}_{$posId}_{$perPage}_{$page}";
         
-        $orders = Cache::remember($cacheKey, 60, function () use ($tenantId, $perPage, $status, $posId, $request) {
             $query = PosOrder::where('tenant_id', $tenantId)
                 ->select(['id', 'reference', 'status', 'total', 'pos_id', 'customer_id', 'created_by', 'created_at']);
 
@@ -513,8 +510,7 @@ class ApprovisionnementController extends Controller
                 $query->where('user_id', $request->query('user_id'));
             }
 
-            return $query->orderBy('created_at', 'desc')->paginate($perPage);
-        });
+            $orders = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json($orders);
     }

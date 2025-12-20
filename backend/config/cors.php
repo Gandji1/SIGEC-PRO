@@ -1,27 +1,34 @@
 <?php
 
-/**
- * Configuration CORS - Sécurisée selon l'environnement
- * 
- * En production: restreint aux domaines autorisés
- * En développement: permissif pour faciliter le dev
- */
-
-$allowedOrigins = env('APP_ENV') === 'production' 
-    ? array_filter([
-        env('FRONTEND_URL', 'https://sigec.app'),
-        env('APP_URL'),
-    ])
-    : ['*'];
-
 return [
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'register', 'login'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cross-Origin Resource Sharing (CORS) Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure your settings for cross-origin resource sharing
+    | or "CORS". This determines what cross-origin operations may execute
+    | in web browsers. You are free to adjust these settings as needed.
+    |
+    | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+    |
+    */
+
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+
     'allowed_methods' => ['*'],
-    // En dev on autorise tout (frontend Vercel + local)
-    'allowed_origins' => ['https://sigec.artbenshow.com', 'http://localhost:3000'],
+
+    'allowed_origins' => ['http://localhost:3000', 'https://sigec.artbenshow.com'],
+
     'allowed_origins_patterns' => [],
+
     'allowed_headers' => ['*'],
+
     'exposed_headers' => [],
+
     'max_age' => 0,
+
     'supports_credentials' => true,
+
 ];

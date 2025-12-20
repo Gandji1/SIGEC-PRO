@@ -25,7 +25,12 @@ EXCLUDES=(
 
 echo "Syncing project to ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}..."
 rsync -avz ${EXCLUDES[*]} --delete ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
-echo "Skipping container rebuild. To rebuild containers, run with 'prod' parameter."
+echo "Running cleanup on server..."
+ssh "${REMOTE_USER}@${REMOTE_HOST}" bash -lc "\
+  set -euo pipefail && \
+  cd '${REMOTE_DIR}' && \
+  bash clean.sh"
+echo "Starting containers..."
 ssh "${REMOTE_USER}@${REMOTE_HOST}" bash -lc "\
   set -euo pipefail && \
   cd '${REMOTE_DIR}' && \

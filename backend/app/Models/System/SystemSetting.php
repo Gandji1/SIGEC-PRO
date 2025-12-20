@@ -27,9 +27,7 @@ class SystemSetting extends Model
      */
     public static function get(string $key, $default = null)
     {
-        $setting = Cache::remember("system_setting_{$key}", 3600, function () use ($key) {
-            return self::where('key', $key)->first();
-        });
+        $setting = self::where('key', $key)->first();
 
         if (!$setting) return $default;
 

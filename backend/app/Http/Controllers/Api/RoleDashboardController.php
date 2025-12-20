@@ -30,7 +30,6 @@ class RoleDashboardController extends Controller
         // Cache 30 secondes pour performance
         $cacheKey = "global_stats_{$tenantId}_{$userRole}_" . now()->format('Y-m-d-H-i');
         
-        $stats = Cache::remember($cacheKey, 30, function () use ($tenantId, $userRole) {
             // Pour SuperAdmin - stats plateforme
             if ($userRole === 'super_admin') {
                 return [
@@ -65,7 +64,7 @@ class RoleDashboardController extends Controller
                 ->where('is_active', true)
                 ->count();
 
-            return [
+            $stats =  [
                 'entreprises' => 1,
                 'chiffre_affaires' => (float) $monthTotal,
                 'orders_today' => $todayStats->total_count ?? 0,
@@ -73,7 +72,7 @@ class RoleDashboardController extends Controller
                 'active_users' => $activeUsers,
                 'pending_orders' => $pendingCount,
             ];
-        });
+       
 
         return response()->json(['success' => true, 'data' => $stats]);
     }
@@ -89,7 +88,6 @@ class RoleDashboardController extends Controller
 
         $cacheKey = "cashier_stats_{$tenantId}_{$userId}_" . now()->format('Y-m-d-H-i');
 
-        $stats = Cache::remember($cacheKey, 30, function () use ($tenantId, $posId) {
             // Requête agrégée unique au lieu de ->get()
             $query = \DB::table('pos_orders')
                 ->where('tenant_id', $tenantId)
@@ -109,13 +107,13 @@ class RoleDashboardController extends Controller
             $count = $result->count ?? 0;
             $total = $result->total ?? 0;
 
-            return [
+            $stats = [
                 'today_sales' => (float) $total,
                 'today_transactions' => $count,
                 'avg_basket' => $count > 0 ? round($total / $count, 2) : 0,
                 'pending_orders' => $pendingCount,
             ];
-        });
+        
 
         return response()->json(['success' => true, 'data' => $stats]);
     }
@@ -131,7 +129,6 @@ class RoleDashboardController extends Controller
 
         $cacheKey = "server_stats_{$tenantId}_{$userId}_" . now()->format('Y-m-d-H-i');
         
-        $stats = Cache::remember($cacheKey, 30, function () use ($tenantId, $userId) {
             // Requête agrégée pour aujourd'hui
             $todayStats = \DB::table('pos_orders')
                 ->where('tenant_id', $tenantId)
@@ -153,7 +150,7 @@ class RoleDashboardController extends Controller
                 ->selectRaw("COUNT(*) as total_orders, SUM(CASE WHEN payment_status = 'confirmed' THEN total ELSE 0 END) as total_ca")
                 ->first();
 
-            return [
+            $stats = [
                 'my_orders_count' => $todayStats->total_count ?? 0,
                 'preparing_count' => $todayStats->preparing_count ?? 0,
                 'served_count' => $todayStats->served_count ?? 0,
@@ -164,7 +161,7 @@ class RoleDashboardController extends Controller
                 'total_orders' => $allTimeStats->total_orders ?? 0,
                 'total_ca' => (float) ($allTimeStats->total_ca ?? 0),
             ];
-        });
+        
 
         return response()->json(['success' => true, 'data' => $stats]);
     }
@@ -274,8 +271,7 @@ class RoleDashboardController extends Controller
             // Cache de 30 secondes pour les stats manager
             $cacheKey = "manager_stats_{$tenantId}_" . today()->format('Ymd');
             
-            $data = Cache::remember($cacheKey, 30, function () use ($tenantId) {
-                // Ventes aujourd'hui - une seule requête
+                 // Ventes aujourd'hui - une seule requête
                 $todayStats = PosOrder::where('tenant_id', $tenantId)
                     ->whereDate('created_at', today())
                     ->where(function($q) {
@@ -360,7 +356,7 @@ class RoleDashboardController extends Controller
                         'min_quantity' => $s->min_quantity ?? 5,
                     ]);
 
-                return [
+                $data = [
                     'todaySales' => $todayStats->count ?? 0,
                     'todaySalesAmount' => (float) ($todayStats->total ?? 0),
                     'pendingTransfers' => $pendingTransfers,
@@ -373,7 +369,7 @@ class RoleDashboardController extends Controller
                     'topProducts' => $topProducts,
                     'lowStockProducts' => $lowStockProducts,
                 ];
-            });
+            
 
             return response()->json(['success' => true, 'data' => $data]);
         } catch (\Exception $e) {

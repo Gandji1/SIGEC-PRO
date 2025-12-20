@@ -39,7 +39,7 @@ class CacheService
      */
     public static function remember(string $key, int $ttl, callable $callback)
     {
-        return Cache::remember($key, $ttl, $callback);
+        return $callback();
     }
 
     /**

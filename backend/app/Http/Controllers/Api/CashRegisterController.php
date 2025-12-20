@@ -414,7 +414,7 @@ class CashRegisterController extends Controller
 
         $cacheKey = "cash_manager_dashboard_{$tenantId}_" . today()->format('Ymd');
         
-        $data = Cache::remember($cacheKey, 30, function () use ($tenantId, $from, $to) {
+      
             // Sessions ouvertes
             $openSessions = CashRegisterSession::where('tenant_id', $tenantId)
                 ->where('status', 'open')
@@ -451,7 +451,7 @@ class CashRegisterController extends Controller
             $expenses = Expense::where('tenant_id', $tenantId)
                 ->whereBetween('created_at', [$from, $to])->sum('amount') ?? 0;
 
-            return [
+            $data = [
                 'open_sessions' => $openSessions,
                 'today' => [
                     'total_in' => $todayStats->total_in ?? 0,
@@ -466,7 +466,8 @@ class CashRegisterController extends Controller
                 ],
                 'expenses' => $expenses,
             ];
-        });
+        
+            
 
         return response()->json(['data' => $data]);
     }

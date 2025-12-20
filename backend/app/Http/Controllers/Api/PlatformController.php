@@ -17,9 +17,7 @@ class PlatformController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
-        $stats = Cache::remember('platform_stats', 300, function () {
-            // Calculer la taille DB selon le driver
-            $dbSize = 0;
+          $dbSize = 0;
             try {
                 $driver = DB::connection()->getDriverName();
                 if ($driver === 'pgsql') {
@@ -33,7 +31,7 @@ class PlatformController extends Controller
                 $dbSize = 0;
             }
 
-            return [
+            $stats = [
                 'active_tenants' => Tenant::where('status', 'active')->count(),
                 'suspended_tenants' => Tenant::where('status', 'suspended')->count(),
                 'total_tenants' => Tenant::count(),
@@ -44,7 +42,7 @@ class PlatformController extends Controller
                 'db_size' => $dbSize,
                 'requests_today' => AuditLog::whereDate('created_at', today())->count(),
             ];
-        });
+        
 
         return response()->json(['data' => $stats]);
     }

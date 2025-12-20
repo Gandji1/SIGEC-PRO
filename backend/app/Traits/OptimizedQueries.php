@@ -40,7 +40,7 @@ trait OptimizedQueries
      */
     public static function getCached(string $cacheKey, int $ttl, callable $callback)
     {
-        return Cache::remember($cacheKey, $ttl, $callback);
+        return $callback();
     }
 
     /**
@@ -100,7 +100,7 @@ trait OptimizedQueries
      */
     public static function countCached(string $cacheKey, int $ttl, Builder $query): int
     {
-        return Cache::remember($cacheKey, $ttl, fn() => $query->count());
+        return  $query->count();
     }
 
     /**
@@ -108,6 +108,6 @@ trait OptimizedQueries
      */
     public static function sumCached(string $cacheKey, int $ttl, Builder $query, string $column): float
     {
-        return Cache::remember($cacheKey, $ttl, fn() => (float) $query->sum($column));
+        return (float) $query->sum($column);
     }
 }

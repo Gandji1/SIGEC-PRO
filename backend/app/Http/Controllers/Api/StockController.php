@@ -37,8 +37,7 @@ class StockController extends Controller
         // Cache key basée sur les paramètres
         $cacheKey = "stocks_{$tenantId}_{$warehouseId}_{$warehouse}_{$lowStock}_{$perPage}_{$page}";
         
-        $stocks = Cache::remember($cacheKey, 30, function () use ($tenantId, $warehouseId, $warehouse, $lowStock, $perPage) {
-            $query = Stock::where('tenant_id', $tenantId)
+           $query = Stock::where('tenant_id', $tenantId)
                 ->select(['id', 'product_id', 'warehouse_id', 'warehouse', 'quantity', 'available', 'reserved', 'unit_cost', 'cost_average'])
                 ->with(['product:id,name,code,unit,selling_price,purchase_price']);
 
@@ -54,8 +53,8 @@ class StockController extends Controller
                 $query->where('available', '<=', 10);
             }
 
-            return $query->orderBy('created_at', 'desc')->paginate($perPage);
-        });
+            $stocks = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        
 
         return response()->json($stocks);
     }
@@ -395,8 +394,7 @@ class StockController extends Controller
         // Cache de 60 secondes pour le summary
         $cacheKey = "stock_summary_{$tenantId}";
         
-        $summary = Cache::remember($cacheKey, 60, function () use ($tenantId) {
-            return [
+            $summary = [
                 'total_items' => Stock::where('tenant_id', $tenantId)->count(),
                 'total_quantity' => Stock::where('tenant_id', $tenantId)->sum('quantity'),
                 'total_available' => Stock::where('tenant_id', $tenantId)->sum('available'),
@@ -408,7 +406,7 @@ class StockController extends Controller
                     ->where('available', '<=', 10)
                     ->count(),
             ];
-        });
+        
 
         return response()->json($summary);
     }

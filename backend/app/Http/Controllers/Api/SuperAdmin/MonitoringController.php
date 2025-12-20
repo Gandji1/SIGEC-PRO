@@ -17,14 +17,13 @@ class MonitoringController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $data = Cache::remember('monitoring_data', 30, function () {
-            return [
+        $data =  [
                 'server' => $this->getServerMetrics(),
                 'database' => $this->getDatabaseMetrics(),
                 'application' => $this->getApplicationMetrics(),
                 'tenants' => $this->getTenantsHealth(),
             ];
-        });
+        
 
         return response()->json(['data' => $data]);
     }
