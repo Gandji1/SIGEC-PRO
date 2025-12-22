@@ -122,7 +122,8 @@ export default function HomePage() {
   }, [cachedStats, setCache]);
 
   const userRole = user?.role || 'pos_server';
-  const menuItems = getAccessibleRoutes(userRole);
+  const pos_option = user?.pos_option || 'A';
+  const menuItems = getAccessibleRoutes(userRole, pos_option);
 
   // Formater le montant
   const formatCurrency = (amount) => {

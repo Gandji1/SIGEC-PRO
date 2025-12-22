@@ -152,61 +152,7 @@ export default function ServeurDashboard() {
         </button>
       </div>
 
-      {/* Mes Commandes en Cours - MOBILE OPTIMIZED */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg sm:rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 dark:border-slate-700">
-        <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 flex items-center gap-2">
-          <Clock size={16} className="text-orange-500" />
-          Mes Commandes
-        </h2>
-        {myOrders.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Aucune commande en cours</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {myOrders.map((order) => (
-              <div 
-                key={order.id} 
-                className={`border rounded-lg p-4 cursor-pointer hover:shadow-md transition ${
-                  order.preparation_status === 'served' && order.payment_status !== 'confirmed' ? 'border-green-500 bg-green-50' : ''
-                }`}
-                onClick={() => navigate(`/pos/my-orders`)}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="font-mono font-bold">{order.reference}</span>
-                  <div className="flex gap-1">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[order.preparation_status]}`}>
-                      {statusLabels[order.preparation_status]}
-                    </span>
-                    {order.payment_status === 'confirmed' && (
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                        Payée
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="text-sm text-gray-600 mb-2">
-                  {order.table_number ? `Table ${order.table_number}` : 'Comptoir'}
-                  {order.customer?.name && ` - ${order.customer.name}`}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-500">
-                    {order.items?.length || 0} articles
-                  </span>
-                  <span className="font-bold text-green-600">
-                    {formatCurrency(order.total)}
-                  </span>
-                </div>
-                {order.preparation_status === 'served' && order.payment_status !== 'confirmed' && (
-                  <div className="mt-2 text-center">
-                    <span className="text-green-600 font-semibold animate-pulse">
-                      💰 Prêt pour paiement!
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+
 
       {/* Indicateur de statut - MOBILE OPTIMIZED */}
       <div className="bg-gray-50 rounded-lg sm:rounded-xl p-2 sm:p-4 flex items-center justify-between">

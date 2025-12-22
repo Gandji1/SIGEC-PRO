@@ -3,11 +3,31 @@
  * Gère les permissions et rôles utilisateur
  */
 
-// Mappage rôles → permissions
-const ROLE_PERMISSIONS = {
-  super_admin: [
-    // ✅ SUPER ADMIN = ACCÈS TOTAL À TOUT
-    // Host management
+// ============================================
+// CONSTANTS
+// ============================================
+
+export const ROLES = Object.freeze({
+  SUPER_ADMIN: "super_admin",
+  OWNER: "owner",
+  ADMIN: "admin",
+  MANAGER: "manager",
+  ACCOUNTANT: "accountant",
+  MAGASINIER_GROS: "magasinier_gros",
+  MAGASINIER_DETAIL: "magasinier_detail",
+  CAISSIER: "caissier",
+  POS_SERVER: "pos_server",
+  AUDITOR: "auditor",
+  SUPPLIER: "supplier",
+});
+
+// ============================================
+// PERMISSION GROUPS (composable)
+// ============================================
+
+const PERMISSIONS = {
+  // Platform (Super Admin)
+  platform: [
     "platform.view",
     "tenants.list",
     "tenants.create",
@@ -23,260 +43,278 @@ const ROLE_PERMISSIONS = {
     "settings.global",
     "logs.view",
     "users.reset-password",
-    // Tenant features
-    "tenant.view",
-    "tenant.edit",
+  ],
+
+  // Tenant base
+  tenantBase: ["tenant.view", "tenant.edit"],
+  tenantView: ["tenant.view"],
+
+  // Users
+  usersManage: [
     "users.list",
     "users.create",
     "users.edit",
     "users.delete",
     "roles.assign",
-    "warehouses.manage",
-    "suppliers.manage",
-    "customers.manage",
-    "purchases.manage",
-    "sales.manage",
-    "transfers.manage",
-    "stocks.view",
-    "stocks.adjust",
+  ],
+
+  // Warehouses
+  warehousesManage: ["warehouses.manage"],
+
+  // Suppliers
+  suppliersManage: ["suppliers.manage"],
+  suppliersFull: [
+    "suppliers.list",
+    "suppliers.create",
+    "suppliers.edit",
+    "suppliers.delete",
+  ],
+  suppliersView: ["suppliers.list", "suppliers.view"],
+
+  // Customers
+  customersManage: ["customers.manage"],
+  customersFull: [
+    "customers.list",
+    "customers.create",
+    "customers.edit",
+    "customers.delete",
+  ],
+
+  // Purchases
+  purchasesManage: ["purchases.manage"],
+  purchasesFull: ["purchases.list", "purchases.create", "purchases.receive"],
+  purchasesApprove: ["purchases.list", "purchases.approve", "purchases.view"],
+  purchasesReceive: ["purchases.list", "purchases.receive"],
+
+  // Sales
+  salesManage: ["sales.manage"],
+  salesFull: ["sales.list", "sales.validate", "sales.view"],
+  salesView: ["sales.list", "sales.view"],
+
+  // Transfers
+  transfersManage: ["transfers.manage"],
+  transfersFull: ["transfers.list", "transfers.create", "transfers.approve"],
+  transfersView: ["transfers.list", "transfers.view"],
+  transfersReceive: ["transfers.list", "transfers.receive"],
+
+  // Stocks
+  stocksFull: ["stocks.view", "stocks.adjust", "stocks.move"],
+  stocksView: ["stocks.view"],
+  stocksMove: ["stocks.view", "stocks.move"],
+
+  // Inventories
+  inventoriesManage: ["inventories.manage"],
+  inventoriesFull: [
+    "inventories.list",
     "inventories.manage",
+    "inventories.validate",
+  ],
+  inventoriesView: ["inventories.list", "inventories.view"],
+  inventoriesParticipate: ["inventories.list", "inventories.participate"],
+
+  // Accounting
+  accountingFull: [
     "accounting.view",
     "accounting.post",
     "accounting.close-period",
-    "charges.manage",
-    "charges.create",
-    "charges.edit",
-    "reports.view",
-    "reports.export",
-    "audit.view",
-    "psp.delegate",
-    // Dashboards
+    "accounting.export",
+  ],
+  accountingView: ["accounting.view"],
+
+  // Charges
+  chargesManage: ["charges.manage", "charges.create", "charges.edit"],
+  chargesCreate: ["charges.list", "charges.create"],
+  chargesView: ["charges.list", "charges.view"],
+
+  // Reports
+  reportsFull: ["reports.view", "reports.export"],
+  reportsView: ["reports.view"],
+
+  // Audit
+  auditView: ["audit.view"],
+
+  // PSP
+  pspDelegate: ["psp.delegate"],
+
+  // Cash
+  cashManage: ["cash.manage", "cash.view"],
+  cashView: ["cash.view"],
+
+  // Dashboards
+  dashboardAll: [
     "dashboard.manager",
     "dashboard.accounting",
     "dashboard.warehouse",
     "dashboard.pos",
     "dashboard.audit",
     "dashboard.cashier",
-    // Additional tenant operations
-    "purchases.list",
-    "purchases.create",
-    "purchases.receive",
-    "sales.list",
-    "sales.validate",
-    "sales.view",
+  ],
+  dashboardManager: ["dashboard.manager"],
+  dashboardAccounting: ["dashboard.accounting"],
+  dashboardWarehouse: ["dashboard.warehouse"],
+  dashboardPos: ["dashboard.pos"],
+  dashboardAudit: ["dashboard.audit"],
+  dashboardCashier: ["dashboard.cashier"],
+
+  // POS
+  posFull: [
     "pos.supervise",
-    "inventories.validate",
     "pos.payments",
     "pos.close-session",
     "pos.create-sale",
     "pos.apply-discount",
     "pos.view-history",
     "pos.prepare",
-    "stocks.move",
   ],
+  posServer: ["pos.create-sale", "pos.view-history"],
+  posCashier: ["pos.payments", "pos.close-session"],
+  posPrepare: ["pos.prepare"],
 
-  owner: [
-    // ✅ TENANT (Propriétaire) - Consultation + Approbation commandes fournisseurs
-    // ❌ Ne passe PAS de commande fournisseur, ne valide PAS les ventes
-    // ✅ Approuve les commandes du Gérant AVANT envoi au fournisseur
-    "tenant.view",
-    "tenant.edit",
-    "users.list",
-    "users.create",
-    "users.edit",
-    "users.delete",
-    "roles.assign",
-    "warehouses.manage",
-    "suppliers.list",
-    "suppliers.create",
-    "suppliers.edit",
-    "suppliers.delete", // Gère les fournisseurs
-    "customers.list",
-    "customers.create",
-    "customers.edit",
-    "customers.delete",
-    "purchases.list",
-    "purchases.approve",
-    "purchases.view", // Approuve les commandes du gérant
-    "sales.list",
-    "sales.view", // Consultation ventes uniquement
-    "transfers.list",
-    "transfers.view",
-    "stocks.view",
-    "inventories.list",
-    "inventories.view",
-    "accounting.view",
-    "accounting.post",
-    "accounting.close-period",
-    "accounting.export",
-    "charges.list",
-    "charges.view",
-    "reports.view",
-    "reports.export",
-    "audit.view",
-    "psp.delegate",
-    "cash.view", // Consultation caisse
-  ],
-
-  admin: [
-    // Alias for owner (for backward compatibility)
-    "tenant.view",
-    "tenant.edit",
-    "users.list",
-    "users.create",
-    "users.edit",
-    "users.delete",
-    "roles.assign",
-    "warehouses.manage",
-    "suppliers.list",
-    "suppliers.create",
-    "suppliers.edit",
-    "suppliers.delete",
-    "customers.list",
-    "customers.create",
-    "customers.edit",
-    "customers.delete",
-    "purchases.list",
-    "purchases.approve",
-    "purchases.view",
-    "sales.list",
-    "sales.view",
-    "transfers.list",
-    "transfers.view",
-    "stocks.view",
-    "inventories.list",
-    "inventories.view",
-    "accounting.view",
-    "accounting.post",
-    "accounting.close-period",
-    "accounting.export",
-    "charges.list",
-    "charges.view",
-    "reports.view",
-    "reports.export",
-    "audit.view",
-    "psp.delegate",
-    "cash.view",
-  ],
-
-  manager: [
-    // ✅ GÉRANT - Opérationnel complet
-    // ✅ Seul à créer commandes fournisseurs (soumises au Tenant pour approbation)
-    // ✅ Seul à approuver/servir/valider les ventes des serveurs
-    // ✅ Gère caisse, stock, transferts
-    // ✅ Peut VOIR les fournisseurs pour créer des commandes (lecture seule)
-    "dashboard.manager",
-    "suppliers.list",
-    "suppliers.view", // Lecture seule des fournisseurs pour commandes
-    "purchases.list",
-    "purchases.create",
-    "purchases.receive", // Crée et réceptionne
-    "sales.list",
-    "sales.view",
+  // POS Orders (Manager)
+  posOrdersManage: [
     "pos_orders.manage",
     "pos_orders.approve",
     "pos_orders.serve",
-    "pos_orders.validate", // Valide ventes serveurs
-    "stocks.view",
-    "stocks.adjust",
-    "stocks.move",
-    "transfers.list",
-    "transfers.create",
-    "transfers.approve",
-    "inventories.list",
-    "inventories.manage",
-    "charges.list",
-    "charges.create",
-    "cash.manage",
-    "cash.view", // Gère la caisse
-    "reports.view",
-    "audit.view",
+    "pos_orders.validate",
   ],
 
-  accountant: [
-    "tenant.view",
-    "dashboard.accounting",
-    "sales.list",
-    "purchases.list",
-    "accounting.view",
-    "accounting.post",
-    "accounting.close-period",
-    "accounting.export",
-    "charges.list",
-    "charges.create",
-    "charges.edit",
-    "reports.view",
-    "reports.export",
-    "audit.view",
-  ],
-
-  magasinier_gros: [
-    "tenant.view",
-    "dashboard.warehouse",
-    "purchases.list",
-    "purchases.receive",
-    "stocks.view",
-    "stocks.move",
-    "transfers.create",
-    "transfers.approve",
-    "inventories.list",
-    "inventories.participate",
-  ],
-
-  magasinier_detail: [
-    "tenant.view",
-    "dashboard.warehouse",
-    "stocks.view",
-    "stocks.move",
-    "transfers.list",
-    "transfers.receive",
-    "pos.prepare",
-    "inventories.list",
-    "inventories.participate",
-  ],
-
-  caissier: [
-    "tenant.view",
-    "dashboard.cashier",
-    "pos.payments",
-    "pos.close-session",
-    "sales.view",
-  ],
-
-  pos_server: [
-    // ✅ SERVEUR - Crée des ventes uniquement
-    // ❌ Ne peut PAS approuver, servir, valider (tout va au Gérant)
-    // ❌ Pas d'accès fournisseurs ni magasin
-    "tenant.view",
-    "dashboard.pos",
-    "pos.create-sale",
-    "pos.view-history", // Crée ventes, voit son historique
-    "sales.view", // Voit uniquement SES ventes
-  ],
-
-  auditor: [
-    "tenant.view",
-    "dashboard.audit",
-    "sales.list",
-    "purchases.list",
-    "stocks.view",
-    "accounting.view",
-    "reports.view",
-    "audit.view",
-    "charges.list",
-  ],
-
-  // Fournisseur externe (portail fournisseur)
-  supplier: [
-    // ✅ FOURNISSEUR - Reçoit commandes approuvées par Tenant
-    // Flux: Reçoit → Approuve → Sert → Livrer
+  // Supplier portal
+  supplierPortal: [
     "supplier.dashboard",
     "supplier.orders.view",
     "supplier.orders.confirm",
     "supplier.orders.ship",
     "supplier.orders.deliver",
-    "supplier.history", // Historique des livraisons
+    "supplier.history",
   ],
+};
+
+// Helper to merge permission groups
+const mergePermissions = (...groups) => [...new Set(groups.flat())];
+
+// ============================================
+// OWNER PERMISSIONS (base for admin alias)
+// ============================================
+const OWNER_PERMISSIONS = mergePermissions(
+  PERMISSIONS.tenantBase,
+  PERMISSIONS.usersManage,
+  PERMISSIONS.warehousesManage,
+  PERMISSIONS.suppliersFull,
+  PERMISSIONS.customersFull,
+  PERMISSIONS.purchasesApprove,
+  PERMISSIONS.salesView,
+  PERMISSIONS.transfersView,
+  PERMISSIONS.stocksView,
+  PERMISSIONS.inventoriesView,
+  PERMISSIONS.accountingFull,
+  PERMISSIONS.chargesView,
+  PERMISSIONS.reportsFull,
+  PERMISSIONS.auditView,
+  PERMISSIONS.pspDelegate,
+  PERMISSIONS.cashView
+);
+
+// ============================================
+// ROLE → PERMISSIONS MAPPING
+// ============================================
+const ROLE_PERMISSIONS = {
+  [ROLES.SUPER_ADMIN]: mergePermissions(
+    PERMISSIONS.platform,
+    PERMISSIONS.tenantBase,
+    PERMISSIONS.usersManage,
+    PERMISSIONS.warehousesManage,
+    PERMISSIONS.suppliersManage,
+    PERMISSIONS.customersManage,
+    PERMISSIONS.purchasesManage,
+    PERMISSIONS.purchasesFull,
+    PERMISSIONS.salesManage,
+    PERMISSIONS.salesFull,
+    PERMISSIONS.transfersManage,
+    PERMISSIONS.stocksFull,
+    PERMISSIONS.inventoriesManage,
+    PERMISSIONS.inventoriesFull,
+    PERMISSIONS.accountingFull,
+    PERMISSIONS.chargesManage,
+    PERMISSIONS.reportsFull,
+    PERMISSIONS.auditView,
+    PERMISSIONS.pspDelegate,
+    PERMISSIONS.dashboardAll,
+    PERMISSIONS.posFull
+  ),
+
+  [ROLES.OWNER]: OWNER_PERMISSIONS,
+  [ROLES.ADMIN]: OWNER_PERMISSIONS, // Alias for backward compatibility
+
+  [ROLES.MANAGER]: mergePermissions(
+    PERMISSIONS.dashboardManager,
+    PERMISSIONS.suppliersView,
+    PERMISSIONS.purchasesFull,
+    PERMISSIONS.salesView,
+    PERMISSIONS.posOrdersManage,
+    PERMISSIONS.stocksFull,
+    PERMISSIONS.transfersFull,
+    PERMISSIONS.inventoriesFull,
+    PERMISSIONS.chargesCreate,
+    PERMISSIONS.cashManage,
+    PERMISSIONS.reportsView,
+    PERMISSIONS.auditView
+  ),
+
+  [ROLES.ACCOUNTANT]: mergePermissions(
+    PERMISSIONS.tenantView,
+    PERMISSIONS.dashboardAccounting,
+    ["sales.list", "purchases.list"],
+    PERMISSIONS.accountingFull,
+    PERMISSIONS.chargesCreate,
+    ["charges.edit"],
+    PERMISSIONS.reportsFull,
+    PERMISSIONS.auditView
+  ),
+
+  [ROLES.MAGASINIER_GROS]: mergePermissions(
+    PERMISSIONS.tenantView,
+    PERMISSIONS.dashboardWarehouse,
+    PERMISSIONS.purchasesReceive,
+    PERMISSIONS.stocksMove,
+    ["transfers.create", "transfers.approve"],
+    PERMISSIONS.inventoriesParticipate
+  ),
+
+  [ROLES.MAGASINIER_DETAIL]: mergePermissions(
+    PERMISSIONS.tenantView,
+    PERMISSIONS.dashboardWarehouse,
+    PERMISSIONS.stocksMove,
+    PERMISSIONS.transfersReceive,
+    PERMISSIONS.posPrepare,
+    PERMISSIONS.inventoriesParticipate
+  ),
+
+  [ROLES.CAISSIER]: mergePermissions(
+    PERMISSIONS.tenantView,
+    PERMISSIONS.dashboardCashier,
+    PERMISSIONS.posCashier,
+    ["sales.view"]
+  ),
+
+  [ROLES.POS_SERVER]: mergePermissions(
+    PERMISSIONS.tenantView,
+    PERMISSIONS.dashboardPos,
+    PERMISSIONS.posServer,
+    ["sales.view"]
+  ),
+
+  [ROLES.AUDITOR]: mergePermissions(
+    PERMISSIONS.tenantView,
+    PERMISSIONS.dashboardAudit,
+    ["sales.list", "purchases.list"],
+    PERMISSIONS.stocksView,
+    PERMISSIONS.accountingView,
+    PERMISSIONS.reportsView,
+    PERMISSIONS.auditView,
+    ["charges.list"]
+  ),
+
+  [ROLES.SUPPLIER]: PERMISSIONS.supplierPortal,
 };
 
 /**
@@ -322,263 +360,295 @@ export function getRolePermissions(userRole) {
   return ROLE_PERMISSIONS[userRole] || [];
 }
 
+// ============================================
+// ROUTE DEFINITIONS
+// ============================================
+
+const ROUTES = {
+  dashboard: { label: "Dashboard", icon: "📊", path: "/dashboard" },
+  platform: { label: "Plateforme", icon: "🌐", path: "/platform" },
+  tenants: { label: "Tenants", icon: "🏢", path: "/tenant-management" },
+  subscriptions: { label: "Abonnements", icon: "💳", path: "/subscriptions" },
+  superadminAccounting: {
+    label: "Comptabilité Globale",
+    icon: "📈",
+    path: "/superadmin-accounting",
+  },
+  paymentGateways: {
+    label: "Passerelles Paiement",
+    icon: "💰",
+    path: "/payment-gateways",
+  },
+  monitoring: { label: "Monitoring", icon: "📊", path: "/monitoring" },
+  systemLogs: { label: "Logs Système", icon: "📋", path: "/system-logs" },
+  platformSettings: {
+    label: "Plateforme",
+    icon: "🌐",
+    path: "/platform-settings",
+  },
+  paymentConfig: {
+    label: "Paiements",
+    icon: "💳",
+    path: "/payment-configuration",
+  },
+  users: { label: "Utilisateurs", icon: "👤", path: "/users-management" },
+  suppliers: { label: "Fournisseurs", icon: "🏭", path: "/suppliers" },
+  customers: { label: "Clients", icon: "🧑‍💼", path: "/customers" },
+  products: { label: "Produits", icon: "🏷️", path: "/products" },
+  approvisionnement: {
+    label: "Magasin",
+    icon: "🛒",
+    path: "/approvisionnement",
+  },
+  inventory: { label: "Inventaire", icon: "📋", path: "/inventory-enriched" },
+  transfers: { label: "Transferts", icon: "🔄", path: "/transfers" },
+  salesManager: { label: "Ventes", icon: "🛍️", path: "/pos/manager-orders" },
+  salesManagerAlt: { label: "Ventes", icon: "🍽️", path: "/pos/manager-orders" },
+  serverStock: { label: "Stock Serveurs", icon: "📤", path: "/server-stock" },
+  accounting: { label: "Tableau de bord", icon: "📊", path: "/accounting" },
+  immobilisations: {
+    label: "Immobilisations",
+    icon: "🏢",
+    path: "/immobilisations",
+  },
+  rapprochement: {
+    label: "Rapprochement Bancaire",
+    icon: "🏦",
+    path: "/rapprochement-bancaire",
+  },
+  grandLivre: { label: "Grand Livre", icon: "📖", path: "/grand-livre" },
+  balance: { label: "Balance", icon: "⚖️", path: "/balance" },
+  cashRegister: { label: "Caisse", icon: "🏧", path: "/cash-register" },
+  expenses: { label: "Charges", icon: "💸", path: "/expense-tracking" },
+  reports: { label: "Rapports", icon: "📄", path: "/reports" },
+  tenantConfig: {
+    label: "Configuration",
+    icon: "🔧",
+    path: "/tenant-configuration",
+  },
+  settings: { label: "Général", icon: "⚙️", path: "/settings" },
+  journaux: { label: "Journaux", icon: "📚", path: "/journaux" },
+  purchases: { label: "Achats", icon: "📦", path: "/purchases" },
+  sales: { label: "Ventes", icon: "🛒", path: "/sales" },
+  pos: { label: "Point de Vente", icon: "🛍️", path: "/pos" },
+  posEncaissement: { label: "Encaissement", icon: "💳", path: "/pos" },
+  myOrders: { label: "Mes Commandes", icon: "📋", path: "/pos/my-orders" },
+  myStock: { label: "Mon Stock", icon: "📦", path: "/server-stock" },
+  myCash: { label: "Ma Caisse", icon: "🏧", path: "/cash-register" },
+  supplierPortal: {
+    label: "Portail Fournisseur",
+    icon: "🏭",
+    path: "/supplier-portal",
+  },
+  accountingDashboard: {
+    label: "Comptabilité",
+    icon: "💰",
+    path: "/accounting",
+  },
+  approvisionnementAlt: {
+    label: "Approvisionnement",
+    icon: "🏪",
+    path: "/approvisionnement",
+  },
+};
+
+// Helper to create menu group
+const menuGroup = (label, icon, children) => ({
+  label,
+  icon,
+  path: null,
+  children,
+});
+
+// ============================================
+// ROLE-SPECIFIC ROUTE CONFIGURATIONS
+// ============================================
+
+const ROLE_ROUTES = {
+  [ROLES.SUPER_ADMIN]: [
+    ROUTES.dashboard,
+    ROUTES.platform,
+    ROUTES.tenants,
+    ROUTES.subscriptions,
+    ROUTES.superadminAccounting,
+    ROUTES.paymentGateways,
+    ROUTES.monitoring,
+    ROUTES.systemLogs,
+    menuGroup("Paramètres", "⚙️", [
+      ROUTES.platformSettings,
+      ROUTES.paymentConfig,
+    ]),
+  ],
+
+  [ROLES.OWNER]: [
+    ROUTES.dashboard,
+    menuGroup("Collaborateurs", "👥", [
+      ROUTES.users,
+      ROUTES.suppliers,
+      ROUTES.customers,
+    ]),
+    menuGroup("Approvisionnement", "📦", [
+      ROUTES.products,
+      ROUTES.approvisionnement,
+      ROUTES.inventory,
+    ]),
+    ROUTES.salesManager,
+    menuGroup("Comptabilité", "💰", [
+      ROUTES.accounting,
+      ROUTES.immobilisations,
+      ROUTES.rapprochement,
+      ROUTES.grandLivre,
+      ROUTES.balance,
+    ]),
+    menuGroup("Gestion Financière", "🏦", [
+      ROUTES.cashRegister,
+      ROUTES.expenses,
+      ROUTES.reports,
+    ]),
+    menuGroup("Paramètres", "⚙️", [
+      ROUTES.tenantConfig,
+      ROUTES.paymentConfig,
+      ROUTES.settings,
+    ]),
+  ],
+
+  [ROLES.MANAGER]: [
+    ROUTES.dashboard,
+    menuGroup("Approvisionnement", "📦", [
+      ROUTES.products,
+      ROUTES.approvisionnement,
+      ROUTES.inventory,
+      ROUTES.transfers,
+    ]),
+    ROUTES.salesManagerAlt,
+    ROUTES.serverStock,
+    menuGroup("Gestion Financière", "🏦", [
+      ROUTES.cashRegister,
+      ROUTES.expenses,
+      ROUTES.reports,
+    ]),
+  ],
+
+  [ROLES.ACCOUNTANT]: [
+    ROUTES.dashboard,
+    ROUTES.journaux,
+    ROUTES.grandLivre,
+    ROUTES.balance,
+    ROUTES.purchases,
+    ROUTES.sales,
+    ROUTES.expenses,
+    ROUTES.immobilisations,
+    { ...ROUTES.rapprochement, label: "Rapprochement" },
+    ROUTES.reports,
+  ],
+
+  [ROLES.MAGASINIER_GROS]: [
+    ROUTES.dashboard,
+    ROUTES.approvisionnementAlt,
+    ROUTES.inventory,
+    ROUTES.suppliers,
+  ],
+
+  [ROLES.MAGASINIER_DETAIL]: [
+    ROUTES.dashboard,
+    ROUTES.approvisionnementAlt,
+    ROUTES.inventory,
+  ],
+
+  [ROLES.CAISSIER]: [ROUTES.dashboard, ROUTES.posEncaissement, ROUTES.myCash],
+
+  [ROLES.POS_SERVER]: [
+    ROUTES.dashboard,
+    ROUTES.pos,
+    ROUTES.myOrders,
+    ROUTES.myStock,
+  ],
+
+  [ROLES.AUDITOR]: [
+    ROUTES.dashboard,
+    ROUTES.reports,
+    ROUTES.sales,
+    ROUTES.purchases,
+    ROUTES.accountingDashboard,
+  ],
+
+  [ROLES.SUPPLIER]: [ROUTES.supplierPortal],
+};
+
+// Admin uses same routes as Owner
+ROLE_ROUTES[ROLES.ADMIN] = ROLE_ROUTES[ROLES.OWNER];
+
+const DEFAULT_ROUTES = [ROUTES.dashboard];
+
 /**
  * Obtient les routes accessibles selon le rôle
- * Structure hiérarchique avec parents/enfants pour une navigation fluide
  * @param {string} userRole
+ * @param {string} pos_option - "A" (standard) or "B" (delegated stock to servers)
+ *   Option A: Standard flow - servers create sales, manager validates
+ *   Option B: Delegated stock - servers manage their own stock allocation
  * @returns {array} Routes avec label, icon et children optionnel
  */
 export function getAccessibleRoutes(userRole, pos_option = "A") {
-  // ========================================
-  // SUPER ADMIN - Gestion plateforme
-  // ========================================
-  const superAdminRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
-    { label: "Plateforme", icon: "🌐", path: "/platform" },
-    { label: "Tenants", icon: "🏢", path: "/tenant-management" },
-    { label: "Abonnements", icon: "💳", path: "/subscriptions" },
-    {
-      label: "Comptabilité Globale",
-      icon: "📈",
-      path: "/superadmin-accounting",
-    },
-    { label: "Passerelles Paiement", icon: "💰", path: "/payment-gateways" },
-    { label: "Monitoring", icon: "📊", path: "/monitoring" },
-    { label: "Logs Système", icon: "📋", path: "/system-logs" },
-    {
-      label: "Paramètres",
-      icon: "⚙️",
-      path: null,
-      children: [
-        { label: "Plateforme", icon: "🌐", path: "/platform-settings" },
-        { label: "Paiements", icon: "💳", path: "/payment-configuration" },
-      ],
-    },
-  ];
+  const baseRoutes = ROLE_ROUTES[userRole] || DEFAULT_ROUTES;
 
-  // ========================================
-  // OWNER / ADMIN (Tenant/Propriétaire)
-  // ✅ Consultation stocks, ventes, tableaux de bord, caisse
-  // ✅ Approuve commandes du Gérant avant envoi fournisseur
-  // ❌ Ne passe PAS de commande, ne valide PAS les ventes
-  // ========================================
-  const ownerRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
+  // Option B: Add delegated stock routes for Manager and POS Server
+  if (pos_option === "B") {
+    if (userRole === ROLES.MANAGER) {
+      // Manager already has serverStock in base routes
+      return baseRoutes;
+    }
+    if (userRole === ROLES.POS_SERVER) {
+      // POS Server already has myStock in base routes
+      return baseRoutes;
+    }
+  }
 
-    // Parent: Collaborateurs (utilisateurs, fournisseurs, clients)
-    // ✅ Fournisseurs visible uniquement pour le Tenant (pas le Gérant)
-    {
-      label: "Collaborateurs",
-      icon: "👥",
-      path: null,
-      children: [
-        { label: "Utilisateurs", icon: "👤", path: "/users-management" },
-        { label: "Fournisseurs", icon: "🏭", path: "/suppliers" },
-        { label: "Clients", icon: "🧑‍💼", path: "/customers" },
-      ],
-    },
+  // Option A: Remove stock delegation routes
+  if (pos_option === "A") {
+    if (userRole === ROLES.MANAGER) {
+      return baseRoutes.filter(
+        (route) => route.path !== ROUTES.serverStock.path
+      );
+    }
+    if (userRole === ROLES.POS_SERVER) {
+      return baseRoutes.filter((route) => route.path !== ROUTES.myStock.path);
+    }
+  }
 
-    // Parent: Approvisionnement
-    {
-      label: "Approvisionnement",
-      icon: "📦",
-      path: null,
-      children: [
-        { label: "Produits", icon: "🏷️", path: "/products" },
-        { label: "Magasin", icon: "🛒", path: "/approvisionnement" },
-        { label: "Inventaire", icon: "📋", path: "/inventory-enriched" },
-      ],
-    },
-
-    // Ventes (consultation uniquement)
-    { label: "Ventes", icon: "🛍️", path: "/pos/manager-orders" },
-
-    // Parent: Comptabilité
-    {
-      label: "Comptabilité",
-      icon: "💰",
-      path: null,
-      children: [
-        { label: "Tableau de bord", icon: "📊", path: "/accounting" },
-        { label: "Immobilisations", icon: "🏢", path: "/immobilisations" },
-        {
-          label: "Rapprochement Bancaire",
-          icon: "🏦",
-          path: "/rapprochement-bancaire",
-        },
-        { label: "Grand Livre", icon: "📖", path: "/grand-livre" },
-        { label: "Balance", icon: "⚖️", path: "/balance" },
-      ],
-    },
-
-    // Parent: Gestion Financière
-    {
-      label: "Gestion Financière",
-      icon: "🏦",
-      path: null,
-      children: [
-        { label: "Caisse", icon: "🏧", path: "/cash-register" },
-        { label: "Charges", icon: "💸", path: "/expense-tracking" },
-        { label: "Rapports", icon: "📄", path: "/reports" },
-      ],
-    },
-
-    // Parent: Paramètres
-    {
-      label: "Paramètres",
-      icon: "⚙️",
-      path: null,
-      children: [
-        { label: "Configuration", icon: "🔧", path: "/tenant-configuration" },
-        { label: "Paiements", icon: "💳", path: "/payment-configuration" },
-        { label: "Général", icon: "⚙️", path: "/settings" },
-      ],
-    },
-  ];
-
-  // ========================================
-  // MANAGER (Gérant) - Gestion opérationnelle
-  // ✅ Seul émetteur des commandes vers fournisseurs
-  // ✅ Reçoit toutes les ventes des Serveurs
-  // ✅ Seul à approuver/servir/valider les ventes
-  // ✅ Gère caisse, stock, transferts, approvisionnements
-  // ✅ Option B: Délègue stock aux serveurs
-  // ❌ Pas d'accès aux Fournisseurs dans Collaborateurs
-  // ❌ Pas d'accès aux Paramètres (Configuration, Paiements, Général)
-  // ========================================
-  const managerRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
-
-    // Parent: Approvisionnement
-    {
-      label: "Approvisionnement",
-      icon: "📦",
-      path: null,
-      children: [
-        { label: "Produits", icon: "🏷️", path: "/products" },
-        { label: "Magasin", icon: "🛒", path: "/approvisionnement" },
-        { label: "Inventaire", icon: "📋", path: "/inventory-enriched" },
-        { label: "Transferts", icon: "🔄", path: "/transfers" },
-      ],
-    },
-
-    // Ventes - Approuver/Servir/Valider les commandes des serveurs
-    { label: "Ventes", icon: "🍽️", path: "/pos/manager-orders" },
-
-    // Option B: Stock Délégué aux Serveurs
-    { label: "Stock Serveurs", icon: "📤", path: "/server-stock" },
-
-    // Parent: Gestion Financière
-    {
-      label: "Gestion Financière",
-      icon: "🏦",
-      path: null,
-      children: [
-        { label: "Caisse", icon: "🏧", path: "/cash-register" },
-        { label: "Charges", icon: "💸", path: "/expense-tracking" },
-        { label: "Rapports", icon: "📄", path: "/reports" },
-      ],
-    },
-  ];
-
-  // ========================================
-  // ACCOUNTANT (Comptable)
-  // ========================================
-  const accountantRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
-    { label: "Journaux", icon: "📚", path: "/journaux" },
-    { label: "Grand Livre", icon: "📖", path: "/grand-livre" },
-    { label: "Balance", icon: "⚖️", path: "/balance" },
-    { label: "Achats", icon: "📦", path: "/purchases" },
-    { label: "Ventes", icon: "🛒", path: "/sales" },
-    { label: "Charges", icon: "💸", path: "/expense-tracking" },
-    { label: "Immobilisations", icon: "🏢", path: "/immobilisations" },
-    { label: "Rapprochement", icon: "🏦", path: "/rapprochement-bancaire" },
-    { label: "Rapports", icon: "📄", path: "/reports" },
-  ];
-
-  // ========================================
-  // MAGASINIER GROS
-  // ========================================
-  const magasinierGrosRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
-    { label: "Approvisionnement", icon: "🏪", path: "/approvisionnement" },
-    { label: "Inventaire", icon: "📋", path: "/inventory-enriched" },
-    { label: "Fournisseurs", icon: "🏭", path: "/suppliers" },
-  ];
-
-  // ========================================
-  // MAGASINIER DETAIL
-  // ========================================
-  const magasinierDetailRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
-    { label: "Approvisionnement", icon: "🏪", path: "/approvisionnement" },
-    { label: "Inventaire", icon: "📋", path: "/inventory-enriched" },
-  ];
-
-  // ========================================
-  // CAISSIER
-  // ========================================
-  const caissierRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
-    { label: "Encaissement", icon: "💳", path: "/pos" },
-    { label: "Ma Caisse", icon: "🏧", path: "/cash-register" },
-  ];
-
-  // ========================================
-  // SERVEUR POS - Crée des ventes uniquement
-  // ✅ Peut créer des ventes clients
-  // ✅ Voit uniquement SES ventes initiées
-  // ✅ Option B: Gère son stock délégué et fait le point
-  // ❌ Ne peut PAS approuver, servir, valider (tout va au Gérant)
-  // ❌ Pas d'accès fournisseurs ni magasin
-  // ========================================
-  const posServerRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
-    { label: "Point de Vente", icon: "🛍️", path: "/pos" },
-    { label: "Mes Commandes", icon: "📋", path: "/pos/my-orders" },
-    { label: "Mon Stock", icon: "📦", path: "/server-stock" },
-  ];
-
-  // ========================================
-  // AUDITOR
-  // ========================================
-  const auditorRoutes = [
-    { label: "Dashboard", icon: "📊", path: "/dashboard" },
-    { label: "Rapports", icon: "📄", path: "/reports" },
-    { label: "Ventes", icon: "🛒", path: "/sales" },
-    { label: "Achats", icon: "📦", path: "/purchases" },
-    { label: "Comptabilité", icon: "💰", path: "/accounting" },
-  ];
-
-  // ========================================
-  // SUPPLIER (Fournisseur externe)
-  // ========================================
-  const supplierRoutes = [
-    { label: "Portail Fournisseur", icon: "🏭", path: "/supplier-portal" },
-  ];
-
-  // Mapping rôle -> routes
-  const roleRoutes = {
-    super_admin: superAdminRoutes,
-    owner: ownerRoutes,
-    admin: ownerRoutes, // Alias
-    manager: managerRoutes,
-    accountant: accountantRoutes,
-    magasinier_gros: magasinierGrosRoutes,
-    magasinier_detail: magasinierDetailRoutes,
-    caissier: caissierRoutes,
-    pos_server: posServerRoutes,
-    auditor: auditorRoutes,
-    supplier: supplierRoutes,
-  };
-
-  return (
-    roleRoutes[userRole] || [
-      { label: "Dashboard", icon: "📊", path: "/dashboard" },
-    ]
-  );
+  return baseRoutes;
 }
+
+// ============================================
+// ROLE METADATA
+// ============================================
+
+const ROLE_LABELS = {
+  [ROLES.SUPER_ADMIN]: "Super Admin",
+  [ROLES.OWNER]: "Propriétaire",
+  [ROLES.ADMIN]: "Administrateur",
+  [ROLES.MANAGER]: "Gérant",
+  [ROLES.SUPPLIER]: "Fournisseur",
+  [ROLES.ACCOUNTANT]: "Comptable",
+  [ROLES.MAGASINIER_GROS]: "Magasinier Gros",
+  [ROLES.MAGASINIER_DETAIL]: "Magasinier Détail",
+  [ROLES.CAISSIER]: "Caissier",
+  [ROLES.POS_SERVER]: "Serveur POS",
+  [ROLES.AUDITOR]: "Auditeur",
+};
+
+const ROLE_COLORS = {
+  [ROLES.SUPER_ADMIN]: "bg-red-600",
+  [ROLES.OWNER]: "bg-purple-600",
+  [ROLES.ADMIN]: "bg-purple-600",
+  [ROLES.MANAGER]: "bg-orange-600",
+  [ROLES.ACCOUNTANT]: "bg-yellow-600",
+  [ROLES.MAGASINIER_GROS]: "bg-green-600",
+  [ROLES.MAGASINIER_DETAIL]: "bg-green-500",
+  [ROLES.CAISSIER]: "bg-blue-600",
+  [ROLES.POS_SERVER]: "bg-blue-500",
+  [ROLES.AUDITOR]: "bg-gray-600",
+  [ROLES.SUPPLIER]: "bg-teal-600",
+};
 
 /**
  * Texte affichable du rôle
@@ -586,19 +656,7 @@ export function getAccessibleRoutes(userRole, pos_option = "A") {
  * @returns {string}
  */
 export function getRoleLabel(userRole) {
-  const labels = {
-    super_admin: "Super Admin",
-    owner: "Propriétaire",
-    manager: "Gérant",
-    supplier: "Fournisseur",
-    accountant: "Comptable",
-    magasinier_gros: "Magasinier Gros",
-    magasinier_detail: "Magasinier Détail",
-    caissier: "Caissier",
-    pos_server: "Serveur POS",
-    auditor: "Auditeur",
-  };
-  return labels[userRole] || userRole;
+  return ROLE_LABELS[userRole] || userRole;
 }
 
 /**
@@ -607,21 +665,11 @@ export function getRoleLabel(userRole) {
  * @returns {string}
  */
 export function getRoleColor(userRole) {
-  const colors = {
-    super_admin: "bg-red-600",
-    owner: "bg-purple-600",
-    manager: "bg-orange-600",
-    accountant: "bg-yellow-600",
-    magasinier_gros: "bg-green-600",
-    magasinier_detail: "bg-green-500",
-    caissier: "bg-blue-600",
-    pos_server: "bg-blue-500",
-    auditor: "bg-gray-600",
-  };
-  return colors[userRole] || "bg-gray-400";
+  return ROLE_COLORS[userRole] || "bg-gray-400";
 }
 
 export default {
+  ROLES,
   hasPermission,
   hasAnyPermission,
   hasAllPermissions,

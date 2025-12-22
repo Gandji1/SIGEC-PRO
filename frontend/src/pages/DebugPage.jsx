@@ -6,7 +6,8 @@ export default function DebugPage() {
   const { user, tenant, token } = useTenantStore();
   
   const userRole = user?.role || 'auditor';
-  const menuItems = Object.values(getAccessibleRoutes(userRole));
+  const pos_option = user?.pos_option || 'A';
+  const menuItems = Object.values(getAccessibleRoutes(userRole, pos_option));
   
   return (
     <div className="min-h-screen bg-gray-50 p-8">
