@@ -1201,7 +1201,7 @@ class AccountingController extends Controller
      * États Financiers Complets
      */
     public function financialStatements(Request $request): JsonResponse
-    {
+    { 
         $tenantId = $this->getTenantId($request);
         if (!$tenantId) {
             return response()->json(['error' => 'Tenant non trouvé'], 400);

@@ -39,7 +39,7 @@ class PosOrderController extends Controller
      * Liste des commandes POS
      */
     public function index(Request $request): JsonResponse
-    {
+    { 
         $user = auth()->user();
         $tenantId = $user->tenant_id;
         $limit = min($request->get('limit', 50), 200);

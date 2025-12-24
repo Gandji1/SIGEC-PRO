@@ -43,6 +43,24 @@ services:
     volumes:
       - sigec-mysql-database:/var/lib/mysql
 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: sigec-backend-phpmyadmin
+    restart: unless-stopped
+    networks:
+      - sigec-backend-network
+      - web
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: ${DB_USERNAME:-sigec}
+      PMA_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    depends_on:
+      - mysql
+    ports:
+      - "8087:80"
+
 volumes:
   sigec-mysql-database:
   storage-sigec-backend:
