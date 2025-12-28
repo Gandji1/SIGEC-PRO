@@ -8,6 +8,8 @@ export default function FedapayPaymentButton({
   paymentType,
   metadata,
 }) {
+  const navigate = useNavigate();
+
   function handlePaymentResponse(paymentMethod, response) {
     console.log(`${paymentMethod} response:`, response);
 
@@ -16,7 +18,6 @@ export default function FedapayPaymentButton({
       response.transaction.status === "completed" ||
       response.transaction.status === "approved"
     ) {
-      //alert(`${paymentMethod} : Paiement réussi ! 🎉`);
       if (paymentType === "event") {
         const transactionId =
           response.transaction.id ||
@@ -24,17 +25,9 @@ export default function FedapayPaymentButton({
           "";
         const status = response?.status || response?.transaction?.status;
         const eventId = response?.transaction?.custom_metadata?.event_id || "";
-        router.visit(
-          route("payment.callback", {
-            transactionId,
-            status,
-            eventId,
-            paymentType,
-          }),
-          {
-            preserveState: true,
-            preserveScroll: true,
-          }
+
+        navigate(
+          `/payment/callback?transactionId=${transactionId}&status=${status}&eventId=${eventId}&paymentType=${paymentType}`
         );
       } else if (paymentType === "subscription") {
         const transactionId =
@@ -44,21 +37,13 @@ export default function FedapayPaymentButton({
         const status = response?.status || response?.transaction?.status;
         const subscriptionPlanId =
           response?.transaction?.custom_metadata?.subscription_plan_id || "";
-        router.visit(
-          route("payment.callback", {
-            transactionId,
-            status,
-            subscriptionPlanId,
-            paymentType,
-          }),
-          {
-            preserveState: true,
-            preserveScroll: true,
-          }
+
+        navigate(
+          `/payment/callback?transactionId=${transactionId}&status=${status}&subscriptionPlanId=${subscriptionPlanId}&paymentType=${paymentType}`
         );
       }
     } else {
-      alert(`${paymentMethod} : Échec du paiement1. ${response.status} 🚨`);
+      alert(`${paymentMethod} : Échec du paiement. ${response.status} 🚨`);
     }
   }
 
@@ -77,24 +62,19 @@ export default function FedapayPaymentButton({
       text: label,
     },
     onComplete(resp) {
-      // On utilise une assertion de type sécurisée pour accéder à FedaPay depuis l'objet window
       const FedaPay = window.FedaPay;
 
-      // Vérification que FedaPay est bien disponible
       if (!FedaPay) {
         console.error("FedaPay n'est pas disponible dans la fenêtre globale");
         return;
       }
 
       if (resp.reason === FedaPay.DIALOG_DISMISSED) {
-        //alert('Vous avez fermé la boite de dialogue');
+        console.log("Dialogue FedaPay fermé par l'utilisateur");
       } else {
         console.log("resp", resp);
         handlePaymentResponse("FedaPay", resp);
-        //alert('Transaction terminée: ' + resp.reason);
       }
-
-      //console.log(resp.transaction);
     },
   };
 

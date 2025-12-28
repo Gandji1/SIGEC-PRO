@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'sigec/backend',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-master',
+        'version' => 'dev-master',
+        'reference' => 'bdb97e1b42b9191ef41d478d1297484bf150a588',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -111,6 +111,15 @@
             'install_path' => __DIR__ . '/../fakerphp/faker',
             'aliases' => array(),
             'dev_requirement' => true,
+        ),
+        'fedapay/fedapay-php' => array(
+            'pretty_version' => '0.4.7',
+            'version' => '0.4.7.0',
+            'reference' => '150c196ae7778b10ab04dc82cd882cf1a3c332ce',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../fedapay/fedapay-php',
+            'aliases' => array(),
+            'dev_requirement' => false,
         ),
         'filp/whoops' => array(
             'pretty_version' => '2.18.4',
@@ -1041,9 +1050,9 @@
             'dev_requirement' => true,
         ),
         'sigec/backend' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-master',
+            'version' => 'dev-master',
+            'reference' => 'bdb97e1b42b9191ef41d478d1297484bf150a588',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

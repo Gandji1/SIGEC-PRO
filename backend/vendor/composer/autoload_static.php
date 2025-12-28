@@ -153,6 +153,7 @@ class ComposerStaticInit6dc89e4e10b70d73717c066daf7e27ce
         array (
             'Fruitcake\\Cors\\' => 15,
             'FontLib\\' => 8,
+            'FedaPay\\' => 8,
             'Faker\\' => 6,
         ),
         'E' =>
@@ -492,6 +493,10 @@ class ComposerStaticInit6dc89e4e10b70d73717c066daf7e27ce
         'FontLib\\' =>
         array (
             0 => __DIR__ . '/..' . '/phenx/php-font-lib/src/FontLib',
+        ),
+        'FedaPay\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/fedapay/fedapay-php/lib',
         ),
         'Faker\\' =>
         array (

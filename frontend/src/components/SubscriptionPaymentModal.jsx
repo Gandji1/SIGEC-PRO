@@ -1,4 +1,5 @@
 import { CreditCard } from "lucide-react";
+import FedapayPaymentButton from "../pages/FedapayPaymentButton";
 
 export default function SubscriptionPaymentModal({
   show,
@@ -90,25 +91,25 @@ export default function SubscriptionPaymentModal({
           >
             Annuler
           </button>
-          <button
-            onClick={onSubscribe}
-            disabled={processing}
-            className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {processing ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Traitement...
-              </>
-            ) : (
-              <>
-                <CreditCard size={20} />
-                {selectedPlan.trial_days > 0
-                  ? "Démarrer l'essai"
-                  : "Payer maintenant"}
-              </>
-            )}
-          </button>
+          <FedapayPaymentButton
+            amount={1000}
+            description={`Abonnement ${
+              selectedPlan.display_name || selectedPlan.name
+            }`}
+            label={
+              processing
+                ? "Traitement..."
+                : selectedPlan.trial_days > 0
+                ? "Démarrer l'essai"
+                : "Payer maintenant"
+            }
+            paymentType="subscription"
+            metadata={{
+              subscription_plan_id: selectedPlan.id,
+              plan_name: selectedPlan.name,
+              user_id: selectedPlan.user_id || "",
+            }}
+          />
         </div>
       </div>
     </div>
