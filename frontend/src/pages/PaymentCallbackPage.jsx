@@ -15,6 +15,39 @@ export default function PaymentCallbackPage() {
   const paymentType = searchParams.get("paymentType");
   const subscriptionPlanId = searchParams.get("subscriptionPlanId");
   const eventId = searchParams.get("eventId");
+  const handleSubscribe = async () => {
+    if (!selectedPlan) return;
+
+    setProcessing(true);
+    try {
+      const res = await apiClient.post("/subscription/subscribe", {
+        plan_id: selectedPlan.id,
+        payment_method: paymentMethod,
+        duration_months: 1,
+      });
+
+      if (res.data?.success) {
+        // Rediriger vers le dashboard après abonnement réussi
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error("Subscription error:", err);
+      const status = err.response?.status;
+      const errors = err.response?.data?.errors;
+
+      if (status === 422 && errors && typeof errors === "object") {
+        const firstField = Object.keys(errors)[0];
+        const firstMessage = errors[firstField]?.[0];
+        alert(
+          firstMessage || err.response?.data?.message || "Données invalides"
+        );
+      } else {
+        alert(err.response?.data?.message || "Erreur lors de l'abonnement");
+      }
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   useEffect(() => {
     if (!transactionId || !paymentStatus || !paymentType) {
@@ -48,10 +81,12 @@ export default function PaymentCallbackPage() {
 
   const processSubscriptionPayment = async () => {
     try {
-      const response = await apiClient.post("/subscription/payment-callback", {
+      const response = await apiClient.post("/subscription/subscribe", {
         transaction_id: transactionId,
         status: paymentStatus,
         plan_id: subscriptionPlanId,
+        payment_method: "fedapay",
+        duration_months: 1,
       });
 
       if (response.data?.success) {

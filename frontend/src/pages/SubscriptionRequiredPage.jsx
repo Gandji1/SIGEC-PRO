@@ -60,40 +60,6 @@ export default function SubscriptionRequiredPage() {
     setShowPaymentModal(true);
   };
 
-  const handleSubscribe = async () => {
-    if (!selectedPlan) return;
-
-    setProcessing(true);
-    try {
-      const res = await apiClient.post("/subscription/subscribe", {
-        plan_id: selectedPlan.id,
-        payment_method: paymentMethod,
-        duration_months: 1,
-      });
-
-      if (res.data?.success) {
-        // Rediriger vers le dashboard après abonnement réussi
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      console.error("Subscription error:", err);
-      const status = err.response?.status;
-      const errors = err.response?.data?.errors;
-
-      if (status === 422 && errors && typeof errors === "object") {
-        const firstField = Object.keys(errors)[0];
-        const firstMessage = errors[firstField]?.[0];
-        alert(
-          firstMessage || err.response?.data?.message || "Données invalides"
-        );
-      } else {
-        alert(err.response?.data?.message || "Erreur lors de l'abonnement");
-      }
-    } finally {
-      setProcessing(false);
-    }
-  };
-
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -196,7 +162,7 @@ export default function SubscriptionRequiredPage() {
         show={showPaymentModal}
         selectedPlan={selectedPlan}
         onClose={() => setShowPaymentModal(false)}
-        onSubscribe={handleSubscribe}
+        onSubscribe={() => {}}
         processing={processing}
         paymentMethod={paymentMethod}
         onPaymentMethodChange={setPaymentMethod}

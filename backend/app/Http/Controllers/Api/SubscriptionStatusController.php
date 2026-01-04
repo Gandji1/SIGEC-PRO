@@ -8,6 +8,8 @@ use App\Models\System\TenantModule;
 use App\Models\System\Module;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use FedaPay\FedaPay;
+use FedaPay\Transaction;
 
 class SubscriptionStatusController extends Controller
 {
@@ -158,16 +160,19 @@ class SubscriptionStatusController extends Controller
     public function subscribe(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+         
         if (!$user || !$user->tenant_id) {
             return response()->json(['error' => 'No tenant'], 400);
         }
 
         $validated = $request->validate([
+            'transaction_id' => 'required|string',
             'plan_id' => 'required|exists:system_subscription_plans,id',
             'payment_method' => 'required|string',
             'duration_months' => 'nullable|integer|min:1|max:12',
         ]);
+
+        
 
         $tenant = $user->tenant;
         $plan = \App\Models\System\SubscriptionPlan::findOrFail($validated['plan_id']);
@@ -175,6 +180,35 @@ class SubscriptionStatusController extends Controller
 
         \DB::beginTransaction();
         try {
+            // Initialize FedaPay with your API key
+            FedaPay::setApiKey(config('payment.feda_secret_key'));
+            FedaPay::setEnvironment(config('payment.fedapay_environment', 'sandbox'));
+
+            // Retrieve transaction from FedaPay
+            $fedapayTransaction = Transaction::retrieve($validated['transaction_id']);
+            $status = strtolower($fedapayTransaction->status);
+
+            
+            if ($status === 'approved') {
+                
+                
+            }else{
+                 $message = match($status) {
+                'pending' => 'Votre paiement est en cours de traitement',
+                'failed' => 'Le paiement a échoué. Veuillez réessayer',
+                'canceled' => 'Le paiement a été annulé',
+                default => 'Le paiement est en attente ou a échoué'
+            };
+
+            \DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $message,
+            ], 500);
+
+            }
+
+           
             // Annuler les anciens abonnements
             \App\Models\System\Subscription::where('tenant_id', $tenant->id)
                 ->whereIn('status', ['active', 'trial', 'expired'])

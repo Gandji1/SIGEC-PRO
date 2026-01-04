@@ -21,7 +21,7 @@ class PaymentController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function fedapayCallback(Request $request)
-    {
+    { 
         $transactionType = $request->input('transaction_type'); // 'subscription' or 'event'
         $transactionId = $request->input('transaction_id');
         $eventId = $request->input('event_id');
