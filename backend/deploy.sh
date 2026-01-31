@@ -19,12 +19,13 @@ EXCLUDES=(
   "--exclude storage/framework/views"
   "--exclude frontend/node_modules"
   "--exclude database/database.sqlite"
+  "--exclude .env"
 )
 
 
 
 echo "Syncing project to ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}..."
-rsync -avz ${EXCLUDES[*]} --delete ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
+rsync -avz ${EXCLUDES[*]} ./ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
 echo "Starting containers..."
 ssh "${REMOTE_USER}@${REMOTE_HOST}" bash -lc "\
   set -euo pipefail && \
