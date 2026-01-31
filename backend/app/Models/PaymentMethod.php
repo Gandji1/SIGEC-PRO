@@ -26,7 +26,7 @@ class PaymentMethod extends Model
         'is_active' => 'boolean',
     ];
 
-    protected $hidden = ['api_key', 'api_secret'];
+    protected $hidden = ['api_secret'];
 
     public function tenant(): BelongsTo
     {

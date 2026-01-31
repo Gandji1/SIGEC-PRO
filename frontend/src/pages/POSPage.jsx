@@ -59,6 +59,23 @@ export default function POSPage() {
   const [products, setProducts] = useState(
     () => getCache(CACHE_KEYS.PRODUCTS_ACTIVE) || []
   );
+  /*
+  {
+	"0": {
+		"id": 2,
+		"tenant_id": 2,
+		"name": "Kkiapay",
+		"type": "kkiapay",
+		"is_active": true,
+		"api_key": "sss",
+		"settings": null,
+		"metadata": null,
+		"created_at": "2026-01-05T00:36:24.000000Z",
+		"updated_at": "2026-01-05T00:36:39.000000Z"
+	}
+} */
+  const [paymentMethods, setPaymentMethods] = useState([]);
+
   const [cartItems, setCartItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(!getCache(CACHE_KEYS.PRODUCTS_ACTIVE));
@@ -81,6 +98,18 @@ export default function POSPage() {
 
   // Charger les POS assignés au serveur
   useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get("/tenant-config/payment-methods");
+        console.log(response.data.data);
+        setPaymentMethods(response.data.data || []);
+      } catch (err) {
+        setError("Erreur lors du chargement des moyens de paiement");
+      } finally {
+        setLoading(false);
+      }
+    };
     const fetchAssignedPos = async () => {
       try {
         // Si l'utilisateur a des POS affiliés, les charger

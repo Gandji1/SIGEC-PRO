@@ -77,10 +77,10 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Tenant Configuration routes (Owner/SuperAdmin ONLY - Manager n'a plus accès)
+    Route::get('tenant-config/payment-methods', [TenantConfigurationController::class, 'paymentMethods']);
     Route::middleware('role:owner,admin,super_admin')->prefix('tenant-config')->group(function () {
         Route::get('/', [TenantConfigurationController::class, 'show']);
         Route::put('/', [TenantConfigurationController::class, 'update']);
-        Route::get('/payment-methods', [TenantConfigurationController::class, 'paymentMethods']);
         Route::post('/payment-methods', [TenantConfigurationController::class, 'configurePaymentMethod']);
         Route::get('/pos', [TenantConfigurationController::class, 'posList']);
         Route::post('/pos', [TenantConfigurationController::class, 'createPos']);
@@ -100,7 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{provider}/toggle', [\App\Http\Controllers\Api\TenantPaymentConfigController::class, 'toggle']);
         Route::post('/{provider}/test', [\App\Http\Controllers\Api\TenantPaymentConfigController::class, 'test']);
         Route::get('/logs/webhooks', [\App\Http\Controllers\Api\TenantPaymentConfigController::class, 'webhookLogs']);
-    });
+    }); 
 
     // Subscription Status routes (pour le tenant courant)
     Route::prefix('subscription')->group(function () {

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AccountingEntry;
 use App\Models\Sale;
+use App\Models\PosOrder;
+use App\Models\PosOrderItem;
 use App\Models\Purchase;
 use App\Models\Expense;
 use App\Models\Stock;
@@ -37,10 +39,22 @@ class AccountingController extends Controller
     }
 
     /**
-     * Requête de base pour les ventes comptabilisables
-     * Inclut: completed, paid, ou draft avec paiement effectué
+     * Requête de base pour les ventes comptabilisables (POS Orders)
+     * Inclut: paid, validated, served avec paiement effectué
      */
     protected function salesBaseQuery($tenantId)
+    {
+        return PosOrder::where('tenant_id', $tenantId)
+            ->where(function($q) {
+                $q->whereIn('status', ['paid', 'validated', 'served'])
+                  ->orWhere('amount_paid', '>', 0);
+            });
+    }
+
+    /**
+     * Legacy: Requête de base pour les ventes (Sales table) - kept for backward compatibility
+     */
+    protected function legacySalesBaseQuery($tenantId)
     {
         return Sale::where('tenant_id', $tenantId)
             ->where(function($q) {
@@ -50,6 +64,19 @@ class AccountingController extends Controller
                          ->where('amount_paid', '>', 0);
                   });
             });
+    }
+
+    /**
+     * Calculer le coût des marchandises vendues (COGS) depuis les items POS
+     */
+    protected function calculateCOGS($orderIds)
+    {
+        if ($orderIds->isEmpty()) {
+            return 0;
+        }
+        return PosOrderItem::whereIn('pos_order_id', $orderIds)
+            ->selectRaw('SUM(COALESCE(quantity_ordered, 1) * COALESCE(unit_cost, 0)) as total')
+            ->value('total') ?? 0;
     }
 
     /**
@@ -95,16 +122,36 @@ class AccountingController extends Controller
 
         \Log::info("Summary period: $periodStart to $periodEnd, tenant: $tenantId");
 
-        // Ventes (completed, paid, ou draft avec paiement)
+        // Ventes POS Orders (paid, validated, served)
         $salesQuery = $this->salesBaseQuery($tenantId)
             ->whereDate('created_at', '>=', $periodStart)
             ->whereDate('created_at', '<=', $periodEnd);
         
+        // DEBUG: Log POS orders for this tenant
+        $allOrdersCount = PosOrder::where('tenant_id', $tenantId)->count();
+        $filteredOrdersCount = (clone $salesQuery)->count();
+        $ordersByStatus = PosOrder::where('tenant_id', $tenantId)
+            ->selectRaw('status, COUNT(*) as count, SUM(subtotal) as subtotal_sum, SUM(total) as total_sum')
+            ->groupBy('status')
+            ->get();
+        
+        \Log::info("DEBUG Accounting Summary (POS Orders)", [
+            'tenant_id' => $tenantId,
+            'period' => "$periodStart to $periodEnd",
+            'all_orders_count' => $allOrdersCount,
+            'filtered_orders_count' => $filteredOrdersCount,
+            'orders_by_status' => $ordersByStatus->toArray(),
+        ]);
+        
         // Utiliser subtotal (HT) pour cohérence avec le Compte de Résultat
         $totalSales = (clone $salesQuery)->sum('subtotal') ?? 0;
         
-        \Log::info("Total sales found (HT): $totalSales");
-        $costOfGoodsSold = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        \Log::info("Total POS sales found (HT): $totalSales, Total (TTC): " . ((clone $salesQuery)->sum('total') ?? 0));
+        
+        // Calculer COGS depuis les items des commandes POS
+        $orderIds = (clone $salesQuery)->pluck('id');
+        $costOfGoodsSold = $this->calculateCOGS($orderIds);
+        
         $totalTax = (clone $salesQuery)->sum('tax_amount') ?? 0;
 
         // Achats reçus (fournisseurs)
@@ -145,6 +192,14 @@ class AccountingController extends Controller
             'stock_value' => (float) $stockValue,
             'unposted_entries' => $unpostedEntries,
             'profit_margin' => $totalSales > 0 ? round(($grossProfit / $totalSales) * 100, 2) : 0,
+            // DEBUG info - remove after fixing
+            '_debug' => [
+                'tenant_id' => $tenantId,
+                'all_orders_count' => $allOrdersCount,
+                'filtered_orders_count' => $filteredOrdersCount,
+                'orders_by_status' => $ordersByStatus->toArray(),
+                'total_ttc' => (float) PosOrder::where('tenant_id', $tenantId)->sum('total'),
+            ],
         ]);
     }
 
@@ -170,8 +225,9 @@ class AccountingController extends Controller
         // TA - Chiffre d'affaires (Compte 70)
         $chiffreAffaires = (clone $salesQuery)->sum('subtotal') ?? 0;
         
-        // RA - Achats consommés (Compte 60)
-        $achatsConsommes = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        // RA - Achats consommés (Compte 60) - calculé depuis les items POS
+        $orderIds = (clone $salesQuery)->pluck('id');
+        $achatsConsommes = $this->calculateCOGS($orderIds);
 
         // Dépenses par catégorie SYSCOHADA
         $expenses = $this->expensesBaseQuery($tenantId, $startDate, $endDate)
@@ -367,7 +423,8 @@ class AccountingController extends Controller
             ->whereDate('created_at', '<=', $asOfDate);
         
         $totalSales = (clone $salesQueryEquity)->sum('subtotal') ?? 0;
-        $totalCogs = (clone $salesQueryEquity)->sum('cost_of_goods_sold') ?? 0;
+        $orderIdsEquity = (clone $salesQueryEquity)->pluck('id');
+        $totalCogs = $this->calculateCOGS($orderIdsEquity);
 
         $totalExpenses = Expense::where('tenant_id', $tenantId)
             ->whereDate('created_at', '<=', $asOfDate)
@@ -525,8 +582,9 @@ class AccountingController extends Controller
             ];
         }
 
-        // Coût des ventes
-        $cogs = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        // Coût des ventes (calculé depuis items POS)
+        $orderIdsForCogs = (clone $salesQuery)->pluck('id');
+        $cogs = $this->calculateCOGS($orderIdsForCogs);
 
         if ($cogs > 0) {
             $accounts[] = [
@@ -1070,7 +1128,8 @@ class AccountingController extends Controller
             ->whereDate('created_at', '<=', $endDate);
         
         $salesRevenue = (clone $salesQuery)->sum('subtotal') ?? 0;
-        $cogs = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        $orderIdsSig = (clone $salesQuery)->pluck('id');
+        $cogs = $this->calculateCOGS($orderIdsSig);
 
         // Marge commerciale
         $commercialMargin = $salesRevenue - $cogs;
@@ -1217,7 +1276,8 @@ class AccountingController extends Controller
 
         // Utiliser subtotal (HT) pour cohérence comptable
         $revenue = (clone $salesQuery)->sum('subtotal') ?? 0;
-        $cogs = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        $orderIdsFin = (clone $salesQuery)->pluck('id');
+        $cogs = $this->calculateCOGS($orderIdsFin);
         $taxCollected = (clone $salesQuery)->sum('tax_amount') ?? 0;
         $amountReceived = (clone $salesQuery)->sum('amount_paid') ?? 0;
 
@@ -1292,7 +1352,8 @@ class AccountingController extends Controller
 
         // Utiliser subtotal (HT) pour cohérence comptable
         $revenue = (clone $salesQuery)->sum('subtotal') ?? 0;
-        $cogs = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        $orderIdsCaf = (clone $salesQuery)->pluck('id');
+        $cogs = $this->calculateCOGS($orderIdsCaf);
         $totalExpenses = $this->expensesBaseQuery($tenantId, $startDate, $endDate)->sum('amount') ?? 0;
 
         $grossProfit = $revenue - $cogs;
@@ -1446,7 +1507,8 @@ class AccountingController extends Controller
 
         // Utiliser subtotal (HT) pour cohérence comptable
         $revenue = (clone $salesQuery)->sum('subtotal') ?? 0;
-        $cogs = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        $orderIdsRatios = (clone $salesQuery)->pluck('id');
+        $cogs = $this->calculateCOGS($orderIdsRatios);
         $amountPaid = (clone $salesQuery)->sum('amount_paid') ?? 0;
         $totalExpenses = $this->expensesBaseQuery($tenantId, $startDate, $endDate)->sum('amount') ?? 0;
 

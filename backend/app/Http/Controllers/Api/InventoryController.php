@@ -326,8 +326,8 @@ class InventoryController extends Controller
      * Inclut: SDU Théorique, Stock Physique, Écart, CMM, Min, Max, Point de commande
      */
     public function getEnrichedInventoryData(Request $request): JsonResponse
-    {
-        try {
+    { 
+        try { 
             $tenantId = auth()->guard('sanctum')->user()->tenant_id;
             
             $validated = $request->validate([
