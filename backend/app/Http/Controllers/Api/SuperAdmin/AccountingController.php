@@ -35,7 +35,7 @@ class AccountingController extends Controller
 
         $posRevenue = (clone $query(PosOrder::class))
             ->whereBetween('created_at', [$from, $to])
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'validated', 'served'])
             ->sum('total');
 
         $totalRevenue = $salesRevenue + $posRevenue;
@@ -71,7 +71,7 @@ class AccountingController extends Controller
             ->sum('total');
         $prevRevenue += PosOrder::when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
             ->whereBetween('created_at', [$prevFrom, $prevTo])
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'validated', 'served'])
             ->sum('total');
 
         $revenueTrend = $prevRevenue > 0 
@@ -121,7 +121,7 @@ class AccountingController extends Controller
 
             $posRevenue = PosOrder::where('tenant_id', $tenant->id)
                 ->whereBetween('created_at', [$from, $to])
-                ->where('status', 'completed')
+                ->whereIn('status', ['paid', 'validated', 'served'])
                 ->sum('total');
 
             $revenue = $salesRevenue + $posRevenue;
@@ -152,7 +152,7 @@ class AccountingController extends Controller
                 ->sum('total');
             $prevRevenue += PosOrder::where('tenant_id', $tenant->id)
                 ->whereBetween('created_at', [$prevFrom, $prevTo])
-                ->where('status', 'completed')
+                ->whereIn('status', ['paid', 'validated', 'served'])
                 ->sum('total');
 
             $trend = $prevRevenue > 0 
@@ -203,7 +203,7 @@ class AccountingController extends Controller
         // POS
         $posRevenue = PosOrder::when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
             ->whereBetween('created_at', [$from, $to])
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'validated', 'served'])
             ->sum('total');
 
         $total = $salesGros + $salesDetail + $posRevenue;
@@ -269,7 +269,7 @@ class AccountingController extends Controller
 
         $totalSales += (clone $baseQuery(PosOrder::class))
             ->whereBetween('created_at', [$from, $to])
-            ->whereIn('status', ['validated', 'completed'])
+            ->whereIn('status', ['paid', 'validated', 'served'])
             ->sum('total');
 
         // Coût des ventes (approximation via achats)
@@ -341,7 +341,7 @@ class AccountingController extends Controller
 
         $posRevenue = (clone $baseQuery(PosOrder::class))
             ->whereBetween('created_at', [$from, $to])
-            ->whereIn('status', ['validated', 'completed'])
+            ->whereIn('status', ['paid', 'validated', 'served'])
             ->sum('total');
 
         $totalRevenue = $salesRevenue + $posRevenue;
@@ -592,7 +592,7 @@ class AccountingController extends Controller
 
         $revenue += (clone $baseQuery(PosOrder::class))
             ->whereBetween('created_at', [$from, $to])
-            ->whereIn('status', ['validated', 'completed'])
+            ->whereIn('status', ['paid', 'validated', 'served'])
             ->sum('total');
 
         // Achats consommés
@@ -668,7 +668,7 @@ class AccountingController extends Controller
 
         $revenue += (clone $baseQuery(PosOrder::class))
             ->whereBetween('created_at', [$from, $to])
-            ->whereIn('status', ['validated', 'completed'])
+            ->whereIn('status', ['paid', 'validated', 'served'])
             ->sum('total');
 
         $purchases = (clone $baseQuery(Purchase::class))

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Sale;
+use App\Models\PosOrder;
+use App\Models\PosOrderItem;
 use App\Models\Purchase;
 use App\Models\Expense;
 use App\Models\Stock;
@@ -22,19 +24,29 @@ class ReportController extends Controller
     }
 
     /**
-     * Requête de base pour les ventes comptabilisables
-     * Inclut: completed, paid, ou draft avec paiement effectué
+     * Requête de base pour les ventes comptabilisables (POS Orders)
+     * Inclut: paid, validated, served avec paiement effectué
      */
     protected function salesBaseQuery($tenantId)
     {
-        return Sale::where('tenant_id', $tenantId)
+        return PosOrder::where('tenant_id', $tenantId)
             ->where(function($q) {
-                $q->whereIn('status', ['completed', 'paid'])
-                  ->orWhere(function($q2) {
-                      $q2->where('status', 'draft')
-                         ->where('amount_paid', '>', 0);
-                  });
+                $q->whereIn('status', ['paid', 'validated', 'served'])
+                  ->orWhere('amount_paid', '>', 0);
             });
+    }
+
+    /**
+     * Calculer le coût des marchandises vendues (COGS) depuis les items POS
+     */
+    protected function calculateCOGS($orderIds)
+    {
+        if ($orderIds->isEmpty()) {
+            return 0;
+        }
+        return PosOrderItem::whereIn('pos_order_id', $orderIds)
+            ->selectRaw('SUM(COALESCE(quantity_ordered, 1) * COALESCE(unit_cost, 0)) as total')
+            ->value('total') ?? 0;
     }
 
     /**
@@ -82,9 +94,9 @@ class ReportController extends Controller
             ->get();
 
         $journal = $sales->map(fn($s) => [
-            'date' => ($s->completed_at ?? $s->created_at)->format('Y-m-d'),
+            'date' => ($s->paid_at ?? $s->created_at)->format('Y-m-d'),
             'reference' => $s->reference,
-            'customer' => $s->customer_name ?? 'Client comptoir',
+            'customer' => $s->customer?->name ?? 'Client comptoir',
             'total_ht' => (float) ($s->subtotal ?? ($s->total - $s->tax_amount)),
             'tax' => (float) $s->tax_amount,
             'total_ttc' => (float) $s->total,
@@ -92,8 +104,12 @@ class ReportController extends Controller
             'payment_method' => $s->payment_method,
             'status' => $s->status,
             'items_count' => $s->items->count(),
-            'cost_of_goods_sold' => (float) $s->cost_of_goods_sold,
+            'cost_of_goods_sold' => (float) $s->getCostOfGoodsSold(),
         ]);
+
+        // Calculate total COGS from items
+        $orderIds = $sales->pluck('id');
+        $totalCogs = $this->calculateCOGS($orderIds);
 
         return response()->json([
             'period' => ['start' => $start_date, 'end' => $end_date],
@@ -102,8 +118,8 @@ class ReportController extends Controller
                 'total_sales' => (float) $sales->sum('total'),
                 'total_paid' => (float) $sales->sum('amount_paid'),
                 'total_tax' => (float) $sales->sum('tax_amount'),
-                'total_cogs' => (float) $sales->sum('cost_of_goods_sold'),
-                'gross_profit' => (float) ($sales->sum('total') - $sales->sum('cost_of_goods_sold')),
+                'total_cogs' => (float) $totalCogs,
+                'gross_profit' => (float) ($sales->sum('total') - $totalCogs),
                 'transaction_count' => $sales->count(),
             ],
         ]);
@@ -156,13 +172,14 @@ class ReportController extends Controller
         $start_date = $request->query('start_date', now()->subMonth()->toDateString());
         $end_date = $request->query('end_date', now()->toDateString());
 
-        // Ventes réelles (POS)
+        // Ventes réelles (POS Orders)
         $salesQuery = $this->salesBaseQuery($tenant_id)
             ->whereDate('created_at', '>=', $start_date)
             ->whereDate('created_at', '<=', $end_date);
         
         $sales = (clone $salesQuery)->sum('total') ?? 0;
-        $cogs = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        $orderIds = (clone $salesQuery)->pluck('id');
+        $cogs = $this->calculateCOGS($orderIds);
 
         // Dépenses réelles (table expenses)
         $expenses = $this->expensesBaseQuery($tenant_id, $start_date, $end_date)
@@ -205,14 +222,15 @@ class ReportController extends Controller
 
         $accounts = [];
 
-        // Ventes
+        // Ventes (POS Orders)
         $salesQuery = $this->salesBaseQuery($tenant_id)
             ->whereDate('created_at', '>=', $start_date)
             ->whereDate('created_at', '<=', $end_date);
         
         $sales = (clone $salesQuery)->sum('subtotal') ?? 0;
         $salesTotal = (clone $salesQuery)->sum('total') ?? 0;
-        $cogs = (clone $salesQuery)->sum('cost_of_goods_sold') ?? 0;
+        $orderIds = (clone $salesQuery)->pluck('id');
+        $cogs = $this->calculateCOGS($orderIds);
         $tax = (clone $salesQuery)->sum('tax_amount') ?? 0;
         $cashIn = (clone $salesQuery)->sum('amount_paid') ?? 0;
 

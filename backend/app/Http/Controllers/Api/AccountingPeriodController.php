@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\AccountingPeriod;
 use App\Models\Sale;
+use App\Models\PosOrder;
+use App\Models\PosOrderItem;
 use App\Models\Expense;
 use App\Models\Purchase;
 use Illuminate\Http\JsonResponse;
@@ -209,13 +211,21 @@ class AccountingPeriodController extends Controller
 
     private function calculatePeriodSummary(int $tenantId, $startDate, $endDate): array
     {
-        $sales = Sale::where('tenant_id', $tenantId)
+        // Use PosOrder instead of Sale for actual transactions
+        $orders = PosOrder::where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->where('status', 'completed');
+            ->whereIn('status', ['paid', 'validated', 'served']);
 
-        $totalSales = (clone $sales)->sum('subtotal');
-        $totalCogs = (clone $sales)->sum('cost_of_goods_sold');
-        $salesCount = (clone $sales)->count();
+        $totalSales = (clone $orders)->sum('subtotal');
+        $salesCount = (clone $orders)->count();
+        
+        // Calculate COGS from PosOrderItems
+        $orderIds = (clone $orders)->pluck('id');
+        $totalCogs = $orderIds->isNotEmpty() 
+            ? PosOrderItem::whereIn('pos_order_id', $orderIds)
+                ->selectRaw('SUM(COALESCE(quantity_ordered, 1) * COALESCE(unit_cost, 0)) as total')
+                ->value('total') ?? 0
+            : 0;
 
         $totalExpenses = Expense::where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startDate, $endDate])
