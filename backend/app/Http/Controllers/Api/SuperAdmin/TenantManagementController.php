@@ -292,26 +292,108 @@ class TenantManagementController extends Controller
     }
 
     /**
-     * Supprimer un tenant (soft delete)
+     * Supprimer un tenant (hard delete avec toutes les données associées)
      */
     public function destroy(Tenant $tenant): JsonResponse
     {
-        // Archiver avant suppression
-        SystemLog::log(
-            "Tenant supprimé: {$tenant->name}",
-            'warning',
-            'tenant',
-            "Tenant archivé et marqué pour suppression",
-            ['tenant_id' => $tenant->id, 'tenant_data' => $tenant->toArray()]
-        );
+        DB::beginTransaction();
+        try {
+            // Archiver avant suppression
+            SystemLog::log( 
+                "Tenant supprimé définitivement: {$tenant->name}",
+                'warning',
+                'tenant',
+                "Tenant et toutes ses données supprimés définitivement",
+                ['tenant_id' => $tenant->id, 'tenant_data' => $tenant->toArray()]
+            );
 
-        $tenant->update(['status' => 'deleted']);
-        $tenant->delete(); // Soft delete
+            $tenantId = $tenant->id;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Tenant supprimé',
-        ]);
+            // Désactiver temporairement les contraintes de clés étrangères
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+            // Supprimer toutes les données liées au tenant
+            // Tables avec tenant_id direct
+            DB::table('stock_movements')->where('tenant_id', $tenantId)->delete();
+            DB::table('stocks')->where('tenant_id', $tenantId)->delete();
+            DB::table('server_stocks')->where('tenant_id', $tenantId)->delete();
+            DB::table('server_stock_movements')->where('tenant_id', $tenantId)->delete();
+            DB::table('server_reconciliations')->where('tenant_id', $tenantId)->delete();
+            DB::table('pos_remises')->where('tenant_id', $tenantId)->delete();
+            DB::table('pos_tables')->where('tenant_id', $tenantId)->delete();
+            DB::table('sale_items')->where('tenant_id', $tenantId)->delete();
+            DB::table('sale_payments')->where('tenant_id', $tenantId)->delete();
+            DB::table('purchase_items')->where('tenant_id', $tenantId)->delete();
+            DB::table('customer_payments')->where('tenant_id', $tenantId)->delete();
+            DB::table('supplier_payments')->where('tenant_id', $tenantId)->delete();
+            DB::table('cash_movements')->where('tenant_id', $tenantId)->delete();
+            DB::table('cash_register_sessions')->where('tenant_id', $tenantId)->delete();
+            DB::table('cash_remittances')->where('tenant_id', $tenantId)->delete();
+            DB::table('accounting_entries')->where('tenant_id', $tenantId)->delete();
+            DB::table('accounting_periods')->where('tenant_id', $tenantId)->delete();
+            DB::table('chart_of_accounts')->where('tenant_id', $tenantId)->delete();
+            DB::table('invoices')->where('tenant_id', $tenantId)->delete();
+            DB::table('delivery_notes')->where('tenant_id', $tenantId)->delete();
+            DB::table('notifications')->where('tenant_id', $tenantId)->delete();
+            DB::table('audit_logs')->where('tenant_id', $tenantId)->delete();
+            DB::table('low_stock_alerts')->where('tenant_id', $tenantId)->delete();
+            DB::table('price_history')->where('tenant_id', $tenantId)->delete();
+            DB::table('promotions')->where('tenant_id', $tenantId)->delete();
+            DB::table('stock_requests')->where('tenant_id', $tenantId)->delete();
+            DB::table('expenses')->where('tenant_id', $tenantId)->delete();
+            DB::table('exports')->where('tenant_id', $tenantId)->delete();
+            DB::table('payment_methods')->where('tenant_id', $tenantId)->delete();
+            
+            // Tables avec relations (inventories, pos_orders, sales, purchases, etc.)
+            DB::table('inventories')->where('tenant_id', $tenantId)->delete();
+            DB::table('pos_orders')->where('tenant_id', $tenantId)->delete();
+            DB::table('sales')->where('tenant_id', $tenantId)->delete();
+            DB::table('purchases')->where('tenant_id', $tenantId)->delete();
+            DB::table('transfers')->where('tenant_id', $tenantId)->delete();
+            DB::table('product_returns')->where('tenant_id', $tenantId)->delete();
+            DB::table('customers')->where('tenant_id', $tenantId)->delete();
+            DB::table('suppliers')->where('tenant_id', $tenantId)->delete();
+            DB::table('products')->where('tenant_id', $tenantId)->delete();
+            DB::table('warehouses')->where('tenant_id', $tenantId)->delete();
+            DB::table('pos')->where('tenant_id', $tenantId)->delete();
+            
+            // Tables pivot avec tenant_id
+            if (DB::getSchemaBuilder()->hasColumn('user_pos_tables', 'tenant_id')) {
+                DB::table('user_pos_tables')->where('tenant_id', $tenantId)->delete();
+            }
+            if (DB::getSchemaBuilder()->hasColumn('user_pos_affiliations', 'tenant_id')) {
+                DB::table('user_pos_affiliations')->where('tenant_id', $tenantId)->delete();
+            }
+            
+            // Supprimer les utilisateurs
+            DB::table('users')->where('tenant_id', $tenantId)->delete();
+
+            // Supprimer les relations système
+            DB::table('system_subscriptions')->where('tenant_id', $tenantId)->delete();
+            DB::table('system_tenant_modules')->where('tenant_id', $tenantId)->delete();
+
+            // Hard delete du tenant
+            DB::table('tenants')->where('id', $tenantId)->delete();
+
+            // Réactiver les contraintes de clés étrangères
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tenant et toutes ses données supprimés définitivement',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Réactiver les contraintes même en cas d'erreur
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

@@ -455,7 +455,7 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])->prefix('superadmin')->g
     Route::post('/tenants', [\App\Http\Controllers\Api\SuperAdmin\TenantManagementController::class, 'store']);
     Route::get('/tenants/{tenant}', [\App\Http\Controllers\Api\SuperAdmin\TenantManagementController::class, 'show']);
     Route::put('/tenants/{tenant}', [\App\Http\Controllers\Api\SuperAdmin\TenantManagementController::class, 'update']);
-    Route::delete('/tenants/{tenant}', [\App\Http\Controllers\Api\SuperAdmin\TenantManagementController::class, 'destroy']);
+    Route::delete('/tenants/{tenant}', [\App\Http\Controllers\Api\SuperAdmin\TenantManagementController::class, 'destroy']); 
     Route::post('/tenants/{tenant}/suspend', [\App\Http\Controllers\Api\SuperAdmin\TenantManagementController::class, 'suspend']);
     Route::post('/tenants/{tenant}/activate', [\App\Http\Controllers\Api\SuperAdmin\TenantManagementController::class, 'activate']);
     Route::post('/tenants/{tenant}/impersonate', [\App\Http\Controllers\Api\SuperAdmin\TenantManagementController::class, 'impersonate']);
