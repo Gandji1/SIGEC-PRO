@@ -488,6 +488,7 @@ class PosOrderController extends Controller
                 'validated_by' => $user->id,
                 'validated_at' => now(),
                 'paid_at' => now(),
+                'amount_paid' => $order->total - $order->discount_amount,
             ]);
 
             // Libérer la table si applicable

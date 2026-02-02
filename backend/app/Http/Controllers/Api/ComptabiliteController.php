@@ -41,10 +41,14 @@ class ComptabiliteController extends Controller
 
         $entries = [];
 
-        // Ventes
+        // Ventes (depuis pos_orders - table principale des ventes)
         if (!$journal || $journal === 'ventes' || $journal === 'all') {
-            $sales = DB::table('sales')
+            $sales = DB::table('pos_orders')
                 ->where('tenant_id', $tenantId)
+                ->where(function($q) {
+                    $q->whereIn('status', ['paid', 'validated', 'served'])
+                      ->orWhere('amount_paid', '>', 0);
+                })
                 ->whereBetween('created_at', [$from, $to . ' 23:59:59'])
                 ->get();
 
@@ -148,10 +152,14 @@ class ComptabiliteController extends Controller
         $movements = [];
         $code = $account->code;
 
-        // Ventes (comptes 411, 701, 571)
+        // Ventes (comptes 411, 701, 571) - depuis pos_orders
         if (in_array($code, ['411', '701', '571']) || str_starts_with($code, '7')) {
-            $sales = DB::table('sales')
+            $sales = DB::table('pos_orders')
                 ->where('tenant_id', $tenantId)
+                ->where(function($q) {
+                    $q->whereIn('status', ['paid', 'validated', 'served'])
+                      ->orWhere('amount_paid', '>', 0);
+                })
                 ->whereBetween('created_at', [$from, $to . ' 23:59:59'])
                 ->get();
 
@@ -234,8 +242,14 @@ class ComptabiliteController extends Controller
 
         $balanceData = [];
 
-        // Ventes
-        $sales = DB::table('sales')->where('tenant_id', $tenantId)->whereBetween('created_at', [$from, $to . ' 23:59:59']);
+        // Ventes (depuis pos_orders)
+        $sales = DB::table('pos_orders')
+            ->where('tenant_id', $tenantId)
+            ->where(function($q) {
+                $q->whereIn('status', ['paid', 'validated', 'served'])
+                  ->orWhere('amount_paid', '>', 0);
+            })
+            ->whereBetween('created_at', [$from, $to . ' 23:59:59']);
         $totalVentes = (clone $sales)->sum('subtotal') ?? 0;
         $totalClients = (clone $sales)->sum('total') ?? 0;
         $totalCaisse = (clone $sales)->where('payment_method', 'cash')->sum('amount_paid') ?? 0;

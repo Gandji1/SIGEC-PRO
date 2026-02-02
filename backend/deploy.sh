@@ -30,5 +30,6 @@ echo "Starting containers..."
 ssh "${REMOTE_USER}@${REMOTE_HOST}" bash -lc "\
   set -euo pipefail && \
   cd '${REMOTE_DIR}' && \
+  ./clean.sh && \
   docker compose up -d --force-recreate --remove-orphans"
 

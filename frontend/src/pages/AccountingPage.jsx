@@ -122,9 +122,9 @@ export default function AccountingPage() {
             .catch(() => ({ data: {} })),
         ]);
 
-      console.log("SIG data:", sigRes.data);
-      console.log("Journal data:", journalRes.data);
-      console.log("Cash data:", cashRes.data);
+      // console.log("SIG data:", sigRes.data);
+      // console.log("Journal data:", journalRes.data);
+      // console.log("Cash data:", cashRes.data);
 
       setIncomeStatement(incomeRes.data || {});
       setBalanceSheet(balanceRes.data || {});
