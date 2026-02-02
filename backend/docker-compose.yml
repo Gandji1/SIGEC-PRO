@@ -14,9 +14,6 @@ services:
 
     volumes:
       - storage-sigec-backend:/var/www/storage
-      - ./vendor:/var/www/vendor
-      - ./app:/var/www/app
-      - ./routes:/var/www/routes
     depends_on:
       - mysql
     networks:
